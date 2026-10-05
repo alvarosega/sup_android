@@ -50,6 +50,7 @@ class MainMapViewModel @Inject constructor(
 
     val isOperationActive: StateFlow<Boolean> = sessionPreferences.isOperationActive
     val activeRoute: StateFlow<String> = sessionPreferences.activeRoute
+    val workdayLimitTime: StateFlow<String?> = sessionPreferences.workdayLimitTime
 
     private val _latestLocation = MutableStateFlow<LocationPoint?>(null)
     val latestLocation: StateFlow<LocationPoint?> = _latestLocation.asStateFlow()
@@ -85,8 +86,30 @@ class MainMapViewModel @Inject constructor(
     val isRefreshingGps: StateFlow<Boolean> = _isRefreshingGps.asStateFlow()
 
     init {
+        checkWorkdayStatus()
         syncPlanRuteo()
         forceRefreshGps()
+    }
+
+    fun checkWorkdayStatus() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val response = authApiService.getWorkdayStatus()
+                Log.d("WORKDAY_DEBUG", "getWorkdayStatus HTTP Code: ${response.code()}")
+                if (response.isSuccessful && response.body() != null) {
+                    val status = response.body()!!
+                    Log.d("WORKDAY_DEBUG", "getWorkdayStatus result: isActive=${status.is_active}, status=${status.status}, limit=${status.limit_time}")
+                    status.limit_time?.let { sessionPreferences.setWorkdayLimitTime(it) }
+                    if (!status.is_active || status.action == "STOP_TRACKING" || status.within_schedule == false) {
+                        sessionPreferences.setOperationState(false)
+                    } else {
+                        sessionPreferences.setOperationState(true)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("WORKDAY_DEBUG", "Excepción verificando estado de jornada en backend", e)
+            }
+        }
     }
 
     fun toggleOpportunities() {
@@ -196,17 +219,32 @@ class MainMapViewModel @Inject constructor(
                     val response = authApiService.startWorkday()
                     Log.d("WORKDAY_DEBUG", "startWorkday HTTP Code: ${response.code()}")
 
-                    if (response.isSuccessful) {
-                        sessionPreferences.setOperationState(true)
-                        androidx.work.WorkManager.getInstance(context).cancelUniqueWork("TrackingPeriodicSync")
-                        androidx.work.WorkManager.getInstance(context).cancelUniqueWork("TrackingForegroundSync")
-                        _statusMessage.value = "Jornada iniciada correctamente"
+                    if (response.isSuccessful && response.body() != null) {
+                        val body = response.body()!!
+                        body.limit_time?.let { sessionPreferences.setWorkdayLimitTime(it) }
+                        if (body.is_active == false) {
+                            sessionPreferences.setOperationState(false)
+                            _statusMessage.value = body.message ?: "No autorizado para iniciar jornada"
+                        } else {
+                            sessionPreferences.setOperationState(true)
+                            androidx.work.WorkManager.getInstance(context).cancelUniqueWork("TrackingPeriodicSync")
+                            androidx.work.WorkManager.getInstance(context).cancelUniqueWork("TrackingForegroundSync")
+                            _statusMessage.value = body.message ?: "Jornada iniciada correctamente"
+                        }
                     } else {
+                        sessionPreferences.setOperationState(false)
                         val errorBody = response.errorBody()?.string() ?: ""
                         Log.e("WORKDAY_DEBUG", "Fallo HTTP ${response.code()} en startWorkday: $errorBody")
-                        _statusMessage.value = "No autorizado: $errorBody"
+                        val cleanMsg = try {
+                            val json = com.google.gson.JsonParser.parseString(errorBody).asJsonObject
+                            json.get("message")?.asString ?: "Fuera de horario laboral"
+                        } catch (e: Exception) {
+                            "Fuera de horario laboral configurado"
+                        }
+                        _statusMessage.value = cleanMsg
                     }
                 } catch (e: Exception) {
+                    sessionPreferences.setOperationState(false)
                     Log.e("WORKDAY_DEBUG", "Excepción al iniciar jornada en backend", e)
                     _statusMessage.value = "Error de red al iniciar jornada"
                 }

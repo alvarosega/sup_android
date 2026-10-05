@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
@@ -45,10 +46,12 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.alvarosega.trackingventas.data.local.entity.PlanRuteoEntity
 import com.alvarosega.trackingventas.data.local.entity.requiereCorreccion
 import com.alvarosega.trackingventas.ui.visita.VisitaViewModel
+import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.FolderOverlay
+import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polygon
 
@@ -98,6 +101,8 @@ fun MainMapScreen(
     val isLoadingOpportunities by viewModel.isLoadingOpportunities.collectAsState()
 
     var selectedClient by remember { mutableStateOf<PlanRuteoEntity?>(null) }
+    var selectedClientsGroup by remember { mutableStateOf<List<PlanRuteoEntity>>(emptyList()) }
+    var selectedClientIndex by remember { mutableIntStateOf(0) }
     var selectedClientDistance by remember { mutableFloatStateOf(Float.MAX_VALUE) }
     var hasCenteredOnInitialLocation by remember { mutableStateOf(false) }
 
@@ -173,6 +178,18 @@ fun MainMapScreen(
     ) {
         mapView.overlays.clear()
 
+        // Receptor de toque en fondo del mapa para deseleccionar cliente al tocar espacio vacío
+        val mapTouchOverlay = MapEventsOverlay(object : MapEventsReceiver {
+            override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
+                selectedClient = null
+                selectedClientsGroup = emptyList()
+                return false
+            }
+
+            override fun longPressHelper(p: GeoPoint?): Boolean = false
+        })
+        mapView.overlays.add(mapTouchOverlay)
+
         // Perímetro del cliente seleccionado
         selectedClient?.let { client ->
             val circlePoints = Polygon.pointsAsCircle(
@@ -185,6 +202,8 @@ fun MainMapScreen(
                 fillPaint.style = Paint.Style.FILL
                 outlinePaint.color = 0xFF007AFF.toInt()
                 outlinePaint.strokeWidth = 3f
+                infoWindow = null
+                setOnClickListener { _, _, _ -> false }
             }
             mapView.overlays.add(perimeter)
         }
@@ -227,7 +246,9 @@ fun MainMapScreen(
 
             val marker = Marker(mapView).apply {
                 position = clientPoint
-                title = client.clientName
+                title = null
+                snippet = null
+                infoWindow = null
                 icon = getStoreMarkerDrawable(
                     context,
                     status = markerStatus,
@@ -235,7 +256,20 @@ fun MainMapScreen(
                 )
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                 setOnMarkerClickListener { _, _ ->
-                    selectedClient = client
+                    val nearby = filteredClients.filter { other ->
+                        val res = FloatArray(1)
+                        Location.distanceBetween(client.latitude, client.longitude, other.latitude, other.longitude, res)
+                        res[0] <= 30.0f
+                    }
+                    if (nearby.size > 1) {
+                        selectedClientsGroup = nearby
+                        selectedClientIndex = nearby.indexOf(client).coerceAtLeast(0)
+                        selectedClient = nearby[selectedClientIndex]
+                    } else {
+                        selectedClientsGroup = listOf(client)
+                        selectedClientIndex = 0
+                        selectedClient = client
+                    }
                     true
                 }
             }
@@ -280,6 +314,25 @@ fun MainMapScreen(
                     factory = { mapView },
                     modifier = Modifier.fillMaxSize()
                 )
+
+                // Alerta GPS Desactivado Banner
+                if (!viewModel.isGpsEnabled()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(IosSystemAmber)
+                            .clickable { context.startActivity(android.content.Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }
+                            .padding(vertical = 8.dp, horizontal = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "⚠️ GPS Desactivado. Toca aquí para encender la ubicación.",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
 
                 // Botón Volver
                 Box(
@@ -393,6 +446,62 @@ fun MainMapScreen(
                             .padding(16.dp)
                             .animateContentSize()
                     ) {
+                        // Navegador Carousel si hay múltiples clientes en el mismo punto
+                        if (selectedClientsGroup.size > 1) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "PUNTOS EN ESTA UBICACIÓN (${selectedClientIndex + 1}/${selectedClientsGroup.size})",
+                                    style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosSystemBlue, letterSpacing = 0.5.sp)
+                                )
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    IconButton(
+                                        onClick = {
+                                            if (selectedClientIndex > 0) {
+                                                selectedClientIndex--
+                                                selectedClient = selectedClientsGroup[selectedClientIndex]
+                                            }
+                                        },
+                                        enabled = selectedClientIndex > 0,
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                            contentDescription = "Anterior",
+                                            tint = if (selectedClientIndex > 0) IosSystemBlue else IosLabelSecondary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+
+                                    IconButton(
+                                        onClick = {
+                                            if (selectedClientIndex < selectedClientsGroup.size - 1) {
+                                                selectedClientIndex++
+                                                selectedClient = selectedClientsGroup[selectedClientIndex]
+                                            }
+                                        },
+                                        enabled = selectedClientIndex < selectedClientsGroup.size - 1,
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                            contentDescription = "Siguiente",
+                                            tint = if (selectedClientIndex < selectedClientsGroup.size - 1) IosSystemBlue else IosLabelSecondary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,

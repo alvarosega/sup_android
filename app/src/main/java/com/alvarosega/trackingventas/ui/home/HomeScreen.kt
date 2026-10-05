@@ -64,6 +64,8 @@ fun HomeScreen(
     val context = LocalContext.current
     val isOperationActive by viewModel.isOperationActive.collectAsState()
     val activeRoute by viewModel.activeRoute.collectAsState()
+    val workdayLimitTime by viewModel.workdayLimitTime.collectAsState()
+    val statusMsg by viewModel.statusMessage.collectAsState()
 
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showStopDialog by remember { mutableStateOf(false) }
@@ -72,9 +74,38 @@ fun HomeScreen(
         (context as? Activity)?.moveTaskToBack(true)
     }
 
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.checkWorkdayStatus()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     LaunchedEffect(Unit) {
         androidx.work.WorkManager.getInstance(context).cancelUniqueWork("TrackingPeriodicSync")
         androidx.work.WorkManager.getInstance(context).cancelUniqueWork("TrackingForegroundSync")
+        viewModel.checkWorkdayStatus()
+    }
+
+    LaunchedEffect(isOperationActive) {
+        while (isOperationActive) {
+            kotlinx.coroutines.delay(30000)
+            viewModel.checkWorkdayStatus()
+        }
+    }
+
+    LaunchedEffect(statusMsg) {
+        statusMsg?.let {
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            viewModel.clearStatusMessage()
+        }
     }
 
     fun checkAndStartOperation() {
@@ -84,7 +115,6 @@ fun HomeScreen(
             return
         }
         viewModel.setOperationState(true)
-        Toast.makeText(context, "Jornada iniciada correctamente", Toast.LENGTH_SHORT).show()
     }
 
     val bgLauncher = rememberLauncherForActivityResult(
@@ -355,11 +385,16 @@ fun HomeScreen(
                     .background(IosCardSurface)
                     .border(0.8.dp, IosBorderSeparator, RoundedCornerShape(16.dp))
                     .clickable {
-                        if (isOperationActive) {
-                            onNavigateToMap()
-                        } else {
+                        if (!isOperationActive) {
                             Toast.makeText(context, "Debe iniciar jornada primero", Toast.LENGTH_SHORT).show()
+                            return@clickable
                         }
+                        if (!viewModel.isGpsEnabled()) {
+                            Toast.makeText(context, "El GPS está desactivado. Actívalo para acceder al Plan de Rutas.", Toast.LENGTH_LONG).show()
+                            context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                            return@clickable
+                        }
+                        onNavigateToMap()
                     }
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -469,7 +504,7 @@ fun HomeScreen(
                         )
                     }
                     Text(
-                        text = "08:00 – 17:00",
+                        text = if (!workdayLimitTime.isNullOrBlank()) "Límite: $workdayLimitTime" else "Según Ruta Asignada",
                         style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium, color = IosLabelSecondary)
                     )
                 }

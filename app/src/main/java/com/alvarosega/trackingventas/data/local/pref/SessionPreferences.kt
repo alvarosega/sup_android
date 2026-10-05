@@ -52,8 +52,12 @@ class SessionPreferences @Inject constructor(
         _activeRoute.value = ""
     }
 
+    private val _workdayLimitTime = MutableStateFlow(getWorkdayLimitTimeDirect())
+    val workdayLimitTime: StateFlow<String?> = _workdayLimitTime.asStateFlow()
+
     fun setWorkdayLimitTime(timeStr: String?) {
         prefs.edit().putString(KEY_LIMIT_TIME, timeStr).apply()
+        _workdayLimitTime.value = timeStr
     }
 
     fun getWorkdayLimitTimeDirect(): String? {
