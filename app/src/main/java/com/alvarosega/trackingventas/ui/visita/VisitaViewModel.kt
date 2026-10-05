@@ -64,6 +64,9 @@ class VisitaViewModel @Inject constructor(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
+    private val _capturedPhotos = MutableStateFlow<List<File>>(emptyList())
+    val capturedPhotos: StateFlow<List<File>> = _capturedPhotos.asStateFlow()
+
     var activePhotoFile: File? = null
     var capturedLocation: Location? = null
 
@@ -73,6 +76,8 @@ class VisitaViewModel @Inject constructor(
     }
 
     fun startVisitaForClient(client: PlanRuteoEntity, distanceMeters: Float, lat: Double, lon: Double, accuracy: Float) {
+        _capturedPhotos.value = emptyList()
+        activePhotoFile = null
         val loc = Location("FusedLocation").apply {
             latitude = lat
             longitude = lon
@@ -81,6 +86,13 @@ class VisitaViewModel @Inject constructor(
         }
         capturedLocation = loc
         _proximityState.value = ProximityUiState.SingleClientMatch(client, distanceMeters)
+    }
+
+    fun resetForm() {
+        _capturedPhotos.value = emptyList()
+        activePhotoFile = null
+        capturedLocation = null
+        _proximityState.value = ProximityUiState.Idle
     }
 
     fun startVisitaOpportunity(lat: Double, lon: Double, accuracy: Float) {
@@ -145,11 +157,31 @@ class VisitaViewModel @Inject constructor(
         }
     }
 
-    fun generatePrivatePhotoUri(): Uri {
+    fun createPrivatePhotoFile(): File {
         val dir = File(context.filesDir, "visitas_evidence").apply { mkdirs() }
         val secureNow = serverTimeManager.getSecureCurrentTimeMillis()
-        val file = File(dir, "VISITA_${secureNow}.jpg")
+        val count = _capturedPhotos.value.size + 1
+        val file = File(dir, "VISITA_${secureNow}_$count.jpg")
         activePhotoFile = file
+        return file
+    }
+
+    fun getOrCreatePrivatePhotoFile(): File {
+        return activePhotoFile ?: createPrivatePhotoFile()
+    }
+
+    fun removeCapturedPhoto(file: File) {
+        _capturedPhotos.value = _capturedPhotos.value.filter { it != file }
+        if (file.exists()) {
+            file.delete()
+        }
+        if (activePhotoFile == file) {
+            activePhotoFile = _capturedPhotos.value.lastOrNull()
+        }
+    }
+
+    fun generatePrivatePhotoUri(): Uri {
+        val file = getOrCreatePrivatePhotoFile()
         return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     }
 
@@ -157,21 +189,33 @@ class VisitaViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             val file = activePhotoFile
             val loc = capturedLocation
-            if (file != null && loc != null && file.exists()) {
-                val serverTime = serverTimeManager.getSecureCurrentTimeMillis()
-                loc.time = serverTime
-                ExifMetadataHelper.compressAndInjectMetadata(
-                    photoFile = file,
-                    location = loc,
-                    sellerCode = sellerCode,
-                    serverTimeMillis = serverTime
-                )
+            if (file != null && file.exists() && file.length() > 0) {
+                if (loc != null) {
+                    val serverTime = serverTimeManager.getSecureCurrentTimeMillis()
+                    loc.time = serverTime
+                    ExifMetadataHelper.compressAndInjectMetadata(
+                        photoFile = file,
+                        location = loc,
+                        sellerCode = sellerCode,
+                        serverTimeMillis = serverTime
+                    )
+                }
             }
             withContext(Dispatchers.Main) {
+                val currentFile = activePhotoFile
+                if (currentFile != null && currentFile.exists() && currentFile.length() > 0) {
+                    if (!_capturedPhotos.value.contains(currentFile)) {
+                        _capturedPhotos.value = _capturedPhotos.value + currentFile
+                    } else {
+                        _capturedPhotos.value = _capturedPhotos.value.toList()
+                    }
+                }
                 onComplete()
             }
         }
     }
+
+    fun isGpsEnabled(): Boolean = locationClient.isGpsEnabled()
 
     fun saveVisita(
         selectedClient: PlanRuteoEntity?,
@@ -179,9 +223,15 @@ class VisitaViewModel @Inject constructor(
         opportunityClientName: String?,
         status: String?,
         comments: String?,
+        distanceToClientMeters: Double? = null,
         onSuccess: () -> Unit
     ) {
         Log.d(TAG, "saveVisita invocado. OpActiva: ${sessionPreferences.isOperationActive.value}, Status: $status, isOpp: $isOpportunity")
+
+        if (!locationClient.isGpsEnabled()) {
+            _errorMessage.value = "El GPS debe estar encendido para guardar la visita."
+            return
+        }
 
         if (!sessionPreferences.isOperationActive.value) {
             _errorMessage.value = "Operación no iniciada. Debe iniciar operación primero."
@@ -193,11 +243,11 @@ class VisitaViewModel @Inject constructor(
             return
         }
 
-        val file = activePhotoFile
+        val photos = _capturedPhotos.value
         val loc = capturedLocation
 
-        if (file == null || !file.exists()) {
-            _errorMessage.value = "La fotografía es obligatoria."
+        if (photos.isEmpty() || !photos.any { it.exists() }) {
+            _errorMessage.value = "Debe tomar al menos una fotografía de evidencia."
             return
         }
 
@@ -207,6 +257,7 @@ class VisitaViewModel @Inject constructor(
         }
 
         val currentRoute = sessionPreferences.activeRoute.value
+        val photoPathsString = photos.filter { it.exists() }.joinToString("|") { it.absolutePath }
 
         viewModelScope.launch {
             try {
@@ -214,15 +265,18 @@ class VisitaViewModel @Inject constructor(
                     val visitedAt = serverTimeManager.getBoliviaTimestamp()
 
                     val visita = VisitaEntity(
+                        uuid = java.util.UUID.randomUUID().toString(),
                         clientId = if (isOpportunity) null else selectedClient?.clientId,
                         route = currentRoute.ifBlank { "SIN_RUTA" },
                         status = status,
                         isOpportunity = isOpportunity,
                         opportunityClientName = if (isOpportunity) opportunityClientName else null,
+                        distanceToClient = distanceToClientMeters,
+                        isMockLocation = loc.isFromMockProvider,
                         latitude = loc.latitude,
                         longitude = loc.longitude,
                         accuracy = loc.accuracy,
-                        photoPath = file.absolutePath,
+                        photoPath = photoPathsString,
                         comments = comments,
                         visitedAt = visitedAt,
                         isSynced = false
@@ -243,6 +297,7 @@ class VisitaViewModel @Inject constructor(
                 }
 
                 withContext(Dispatchers.Main) {
+                    resetForm()
                     onSuccess()
                 }
             } catch (e: Throwable) {
@@ -263,7 +318,7 @@ class VisitaViewModel @Inject constructor(
 
         WorkManager.getInstance(context).enqueueUniqueWork(
             "VisitaSyncWorker",
-            ExistingWorkPolicy.APPEND_OR_REPLACE,
+            ExistingWorkPolicy.REPLACE,
             syncWork
         )
         Log.d(TAG, "WorkManager: Encolado VisitaSyncWorker")

@@ -148,11 +148,16 @@ class SaneamientoViewModel @Inject constructor(
         _uiState.value = _uiState.value.fieldUpdater()
     }
 
-    fun generatePrivatePhotoUri(): Uri {
+    fun getOrCreatePrivatePhotoFile(): File {
         val dir = File(context.filesDir, "saneamiento_evidence").apply { mkdirs() }
         val secureNow = serverTimeManager.getSecureCurrentTimeMillis()
         val file = File(dir, "ALTA_${secureNow}.jpg")
         activePhotoFile = file
+        return file
+    }
+
+    fun generatePrivatePhotoUri(): Uri {
+        val file = getOrCreatePrivatePhotoFile()
         return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     }
 

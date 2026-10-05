@@ -50,50 +50,66 @@ class VisitaSyncWorker(
             }
 
             for (visita in pendingVisitas) {
-                val photoFile = File(visita.photoPath)
-                if (!photoFile.exists()) {
-                    Log.e(TAG, "Foto no encontrada en ruta: ${visita.photoPath}")
+                val photoFiles = visita.getPhotoPathList().map { File(it) }.filter { it.exists() }
+                if (photoFiles.isEmpty()) {
+                    Log.e(TAG, "Ninguna foto encontrada para visita ID ${visita.id}: ${visita.photoPath}")
                     continue
                 }
 
-                Log.d(TAG, "Enviando visita ID ${visita.id}. Tamaño foto: ${photoFile.length()} bytes")
+                Log.d(TAG, "Enviando visita ID ${visita.id}. Total fotos a procesar: ${photoFiles.size}")
+                var allPhotosUploadedSuccessfully = true
 
-                val requestFile = photoFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
-                val photoBody = MultipartBody.Part.createFormData("photo", photoFile.name, requestFile)
+                for ((index, photoFile) in photoFiles.withIndex()) {
+                    val photoRequestBody = photoFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
+                    val photoUuid = if (index == 0 && visita.uuid.length == 36) {
+                        visita.uuid
+                    } else {
+                        java.util.UUID.randomUUID().toString()
+                    }
 
-                val statusBody = visita.status.toRequestBody("text/plain".toMediaTypeOrNull())
-                val routeBody = visita.route.toRequestBody("text/plain".toMediaTypeOrNull())
-                val isOpportunityBody = (if (visita.isOpportunity) "1" else "0").toRequestBody("text/plain".toMediaTypeOrNull())
-                val clientIdBody = visita.clientId?.toString()?.toRequestBody("text/plain".toMediaTypeOrNull())
-                val opportunityNameBody = visita.opportunityClientName?.toRequestBody("text/plain".toMediaTypeOrNull())
-                val latBody = visita.latitude.toString().toRequestBody("text/plain".toMediaTypeOrNull())
-                val lonBody = visita.longitude.toString().toRequestBody("text/plain".toMediaTypeOrNull())
-                val accBody = visita.accuracy.toString().toRequestBody("text/plain".toMediaTypeOrNull())
-                val commentsBody = (visita.comments ?: "").toRequestBody("text/plain".toMediaTypeOrNull())
-                val visitedAtBody = visita.visitedAt.toRequestBody("text/plain".toMediaTypeOrNull())
+                    val builder = MultipartBody.Builder()
+                        .setType(MultipartBody.FORM)
+                        .addFormDataPart("photo", photoFile.name, photoRequestBody)
+                        .addFormDataPart("uuid", photoUuid)
+                        .addFormDataPart("status", visita.status)
+                        .addFormDataPart("route", visita.route)
+                        .addFormDataPart("is_opportunity", if (visita.isOpportunity) "1" else "0")
+                        .addFormDataPart("latitude", visita.latitude.toString())
+                        .addFormDataPart("longitude", visita.longitude.toString())
+                        .addFormDataPart("accuracy", visita.accuracy.toString())
+                        .addFormDataPart("is_mock_location", if (visita.isMockLocation) "1" else "0")
+                        .addFormDataPart("comments", visita.comments ?: "")
+                        .addFormDataPart("visited_at", visita.visitedAt)
 
-                val response = apiService.storeVisita(
-                    photo = photoBody,
-                    status = statusBody,
-                    route = routeBody,
-                    isOpportunity = isOpportunityBody,
-                    clientId = clientIdBody,
-                    opportunityClientName = opportunityNameBody,
-                    latitude = latBody,
-                    longitude = lonBody,
-                    accuracy = accBody,
-                    comments = commentsBody,
-                    visitedAt = visitedAtBody
-                )
+                    if (visita.clientId != null) {
+                        builder.addFormDataPart("client_id", visita.clientId.toString())
+                    }
+                    if (!visita.opportunityClientName.isNullOrBlank()) {
+                        builder.addFormDataPart("opportunity_client_name", visita.opportunityClientName)
+                    }
+                    if (visita.distanceToClient != null) {
+                        builder.addFormDataPart("distance_to_client", visita.distanceToClient.toString())
+                    }
 
-                Log.d(TAG, "storeVisita HTTP Status: ${response.code()}")
+                    val response = apiService.storeVisita(builder.build())
 
-                if (response.isSuccessful) {
+                    Log.d(TAG, "storeVisita foto [$index/${photoFiles.size}] HTTP Status: ${response.code()}")
+
+                    if (response.isSuccessful) {
+                        Log.d(TAG, "Foto [$index/${photoFiles.size}] para visita ID ${visita.id} enviada correctamente")
+                    } else {
+                        allPhotosUploadedSuccessfully = false
+                        val errBody = response.errorBody()?.string()
+                        Log.e(TAG, "Error HTTP ${response.code()} en foto [$index]: $errBody")
+                    }
+                }
+
+                if (allPhotosUploadedSuccessfully) {
                     visitaDao.markAsSynced(visita.id)
-                    Log.d(TAG, "Visita local ${visita.id} sincronizada correctamente")
+                    Log.d(TAG, "Visita local ${visita.id} con ${photoFiles.size} foto(s) sincronizada correctamente")
                 } else {
-                    val errBody = response.errorBody()?.string()
-                    Log.e(TAG, "Error HTTP ${response.code()} en backend: $errBody")
+                    Log.e(TAG, "Fallo al subir alguna foto de la visita ${visita.id}. Se reintentará cuando el servidor esté disponible.")
+                    return Result.retry()
                 }
             }
 

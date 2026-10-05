@@ -30,20 +30,9 @@ interface VisitaApiService {
         "Accept: application/json",
         "User-Agent: Mozilla/5.0 (Android; Mobile; TrackingVentas)"
     )
-    @Multipart
     @POST("api/visitas")
     suspend fun storeVisita(
-        @Part photo: MultipartBody.Part,
-        @Part("status") status: RequestBody,
-        @Part("route") route: RequestBody,
-        @Part("is_opportunity") isOpportunity: RequestBody,
-        @Part("client_id") clientId: RequestBody?,
-        @Part("opportunity_client_name") opportunityClientName: RequestBody?,
-        @Part("latitude") latitude: RequestBody,
-        @Part("longitude") longitude: RequestBody,
-        @Part("accuracy") accuracy: RequestBody,
-        @Part("comments") comments: RequestBody,
-        @Part("visited_at") visitedAt: RequestBody
+        @Body body: MultipartBody
     ): Response<ResponseBody>
 
     // 1. ALTA: Envío MultipartBody dinámico y limpio (inmune a bloqueos WAF de headers binarios)

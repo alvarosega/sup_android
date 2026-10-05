@@ -83,38 +83,13 @@ fun SaneamientoFormScreen(
         }
     }
 
-    val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicture()
-    ) { success ->
-        if (success) {
-            viewModel.processCapturedPhoto(sellerCode) {}
-        } else {
-            Toast.makeText(context, "Captura cancelada", Toast.LENGTH_SHORT).show()
-        }
-    }
+    var showCameraPreview by remember { mutableStateOf(false) }
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            try {
-                val uri = viewModel.generatePrivatePhotoUri()
-                val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
-                    putExtra(MediaStore.EXTRA_OUTPUT, uri)
-                    addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                }
-                val pkgManager = context.packageManager
-                val resolvedList = pkgManager.queryIntentActivities(cameraIntent, PackageManager.MATCH_DEFAULT_ONLY)
-                val systemCamera = resolvedList.firstOrNull {
-                    (it.activityInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-                }
-                if (systemCamera != null) {
-                    cameraIntent.setPackage(systemCamera.activityInfo.packageName)
-                }
-                cameraLauncher.launch(uri)
-            } catch (e: Exception) {
-                Toast.makeText(context, "Error cámara: ${e.message}", Toast.LENGTH_LONG).show()
-            }
+            showCameraPreview = true
         } else {
             Toast.makeText(context, "Permiso de cámara obligatorio", Toast.LENGTH_SHORT).show()
         }
@@ -127,24 +102,7 @@ fun SaneamientoFormScreen(
         ) == PackageManager.PERMISSION_GRANTED
 
         if (hasPermission) {
-            try {
-                val uri = viewModel.generatePrivatePhotoUri()
-                val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
-                    putExtra(MediaStore.EXTRA_OUTPUT, uri)
-                    addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                }
-                val pkgManager = context.packageManager
-                val resolvedList = pkgManager.queryIntentActivities(cameraIntent, PackageManager.MATCH_DEFAULT_ONLY)
-                val systemCamera = resolvedList.firstOrNull {
-                    (it.activityInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-                }
-                if (systemCamera != null) {
-                    cameraIntent.setPackage(systemCamera.activityInfo.packageName)
-                }
-                cameraLauncher.launch(uri)
-            } catch (e: Exception) {
-                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
-            }
+            showCameraPreview = true
         } else {
             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
@@ -502,8 +460,11 @@ fun SaneamientoFormScreen(
                                 .padding(12.dp)
                         ) {
                             if (isPhotoValid) {
-                                val bitmap = remember(viewModel.activePhotoFile) {
-                                    BitmapFactory.decodeFile(viewModel.activePhotoFile!!.absolutePath)?.asImageBitmap()
+                                val activeFile = viewModel.activePhotoFile
+                                val bitmap = remember(activeFile, activeFile?.lastModified(), activeFile?.length()) {
+                                    if (activeFile != null && activeFile.exists() && activeFile.length() > 0) {
+                                        BitmapFactory.decodeFile(activeFile.absolutePath)?.asImageBitmap()
+                                    } else null
                                 }
                                 if (bitmap != null) {
                                     Column {
@@ -622,6 +583,21 @@ fun SaneamientoFormScreen(
                 }
             }
         }
+    }
+
+    if (showCameraPreview) {
+        val targetFile = remember(showCameraPreview) { viewModel.getOrCreatePrivatePhotoFile() }
+        com.alvarosega.trackingventas.ui.camera.VisitaCameraPreview(
+            targetFile = targetFile,
+            onPhotoCaptured = {
+                viewModel.processCapturedPhoto(sellerCode) {
+                    showCameraPreview = false
+                }
+            },
+            onClose = {
+                showCameraPreview = false
+            }
+        )
     }
 }
 

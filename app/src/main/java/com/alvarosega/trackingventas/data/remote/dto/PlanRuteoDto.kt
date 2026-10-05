@@ -14,6 +14,8 @@ data class PlanRuteoDto(
     @SerializedName("estado") val status: String?,
 
     // Columnas adicionales para saneamiento
+    @SerializedName("is_visited") val isVisited: Boolean? = null,
+    @SerializedName("visitado") val visitado: Boolean? = null,
     @SerializedName("tipo_negocio") val tipoNegocio: String?,
     @SerializedName("zona") val zona: String?,
     @SerializedName("contacto") val contacto: String?,
@@ -26,6 +28,7 @@ data class PlanRuteoDto(
 )
 
 fun PlanRuteoDto.toEntity(): PlanRuteoEntity {
+    val serverIsVisited = this.isVisited == true || this.visitado == true || this.status.equals("VISITADO", ignoreCase = true)
     return PlanRuteoEntity(
         clientId = this.clientId,
         clientName = this.clientName ?: "Sin Nombre Comercial",
@@ -35,7 +38,7 @@ fun PlanRuteoDto.toEntity(): PlanRuteoEntity {
         latitude = this.latitude ?: 0.0,
         longitude = this.longitude ?: 0.0,
         status = this.status ?: "Activo",
-        isVisited = false,
+        isVisited = serverIsVisited,
         tipoNegocio = this.tipoNegocio,
         zona = this.zona,
         contacto = this.contacto,

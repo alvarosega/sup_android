@@ -95,4 +95,11 @@ dependencies {
 
     implementation("androidx.hilt:hilt-work:$hiltWorkerVersion")
     ksp("androidx.hilt:hilt-compiler:$hiltWorkerVersion")
+
+    // CameraX
+    val cameraXVersion = "1.4.0"
+    implementation("androidx.camera:camera-core:$cameraXVersion")
+    implementation("androidx.camera:camera-camera2:$cameraXVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraXVersion")
+    implementation("androidx.camera:camera-view:$cameraXVersion")
 }

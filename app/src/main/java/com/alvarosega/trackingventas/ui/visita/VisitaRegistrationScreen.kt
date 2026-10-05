@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -68,79 +69,47 @@ fun VisitaRegistrationScreen(
     val isOperationActive by viewModel.isOperationActive.collectAsState()
     val activeRoute by viewModel.activeRoute.collectAsState()
     val errorMsg by viewModel.errorMessage.collectAsState()
+    val capturedPhotos by viewModel.capturedPhotos.collectAsState()
 
     var selectedClient by remember { mutableStateOf<PlanRuteoEntity?>(null) }
     var selectedStatus by remember { mutableStateOf<String?>(null) }
     var comments by remember { mutableStateOf("") }
     var photoCaptured by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
+    var showCameraPreview by remember { mutableStateOf(false) }
+
+    LaunchedEffect(selectedClient?.clientId) {
+        selectedStatus = null
+        comments = ""
+        isSaving = false
+    }
 
     val statusOptions = listOf("PREVENTA", "SIN_DINERO", "TIENDA_CERRADA", "AUSENTE")
-
-    val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicture()
-    ) { success ->
-        if (success) {
-            viewModel.processCapturedPhoto(sellerCode) {
-                photoCaptured = true
-            }
-        } else {
-            Toast.makeText(appContext, "Captura cancelada", Toast.LENGTH_SHORT).show()
-        }
-    }
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            try {
-                val uri = viewModel.generatePrivatePhotoUri()
-                val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
-                    putExtra(MediaStore.EXTRA_OUTPUT, uri)
-                    addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                }
-                val pkgManager = context.packageManager
-                val resolvedList = pkgManager.queryIntentActivities(cameraIntent, PackageManager.MATCH_DEFAULT_ONLY)
-                val systemCamera = resolvedList.firstOrNull {
-                    (it.activityInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-                }
-                if (systemCamera != null) {
-                    cameraIntent.setPackage(systemCamera.activityInfo.packageName)
-                }
-                cameraLauncher.launch(uri)
-            } catch (e: Exception) {
-                Toast.makeText(appContext, "Error al preparar cámara: ${e.message}", Toast.LENGTH_LONG).show()
-            }
+            showCameraPreview = true
         } else {
             Toast.makeText(appContext, "Permiso de cámara obligatorio", Toast.LENGTH_SHORT).show()
         }
     }
 
     fun dispatchCameraCapture() {
+        if (!viewModel.isGpsEnabled()) {
+            Toast.makeText(appContext, "El GPS debe estar encendido para tomar la fotografía de evidencia", Toast.LENGTH_LONG).show()
+            context.startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+            return
+        }
+
         val hasPermission = ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.CAMERA
         ) == PackageManager.PERMISSION_GRANTED
 
         if (hasPermission) {
-            try {
-                val uri = viewModel.generatePrivatePhotoUri()
-                val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
-                    putExtra(MediaStore.EXTRA_OUTPUT, uri)
-                    addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                }
-                val pkgManager = context.packageManager
-                val resolvedList = pkgManager.queryIntentActivities(cameraIntent, PackageManager.MATCH_DEFAULT_ONLY)
-                val systemCamera = resolvedList.firstOrNull {
-                    (it.activityInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-                }
-                if (systemCamera != null) {
-                    cameraIntent.setPackage(systemCamera.activityInfo.packageName)
-                }
-                cameraLauncher.launch(uri)
-            } catch (e: Exception) {
-                Toast.makeText(appContext, "Error al iniciar cámara: ${e.message}", Toast.LENGTH_LONG).show()
-            }
+            showCameraPreview = true
         } else {
             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
@@ -179,7 +148,12 @@ fun VisitaRegistrationScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .clickable { if (!isSaving) onNavigateBack() }
+                        .clickable {
+                            if (!isSaving) {
+                                viewModel.resetForm()
+                                onNavigateBack()
+                            }
+                        }
                         .padding(horizontal = 6.dp, vertical = 6.dp)
                 ) {
                     Icon(
@@ -250,6 +224,7 @@ fun VisitaRegistrationScreen(
                     is ProximityUiState.SingleClientMatch -> {
                         selectedClient = state.client
                         val tieneInconsistencias = state.client.tieneDatosIncompletos()
+                        val isFarFromPoint = state.distance > 150.0f
 
                         Column(
                             modifier = Modifier
@@ -268,7 +243,7 @@ fun VisitaRegistrationScreen(
                                     Icon(
                                         imageVector = Icons.Default.CheckCircle,
                                         contentDescription = null,
-                                        tint = IosSystemGreen,
+                                        tint = if (isFarFromPoint) Color(0xFFFF9500) else IosSystemGreen,
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
@@ -280,12 +255,12 @@ fun VisitaRegistrationScreen(
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(10.dp))
-                                        .background(IosSystemGreenLight)
+                                        .background(if (isFarFromPoint) Color(0xFFFFF3E0) else IosSystemGreenLight)
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     Text(
-                                        text = "A ${state.distance.toInt()}m",
-                                        style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosSystemGreen)
+                                        text = if (isFarFromPoint) "A ${state.distance.toInt()}m (Desfase > 150m)" else "A ${state.distance.toInt()}m",
+                                        style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (isFarFromPoint) Color(0xFFE65100) else IosSystemGreen)
                                     )
                                 }
                             }
@@ -296,8 +271,8 @@ fun VisitaRegistrationScreen(
                                 style = TextStyle(fontSize = 13.sp, color = IosLabelSecondary)
                             )
 
-                            // Alerta de inconsistencia si faltan datos en el cliente
-                            if (tieneInconsistencias) {
+                            // Advertencia si está a más de 150m del punto
+                            if (isFarFromPoint) {
                                 Spacer(modifier = Modifier.height(10.dp))
                                 Box(
                                     modifier = Modifier
@@ -307,36 +282,13 @@ fun VisitaRegistrationScreen(
                                         .border(0.5.dp, Color(0xFFFFB74D), RoundedCornerShape(10.dp))
                                         .padding(horizontal = 10.dp, vertical = 8.dp)
                                 ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = "Datos incompletos (teléfono, NIT o contacto). Se sugiere saneamiento.",
-                                            fontSize = 12.sp,
-                                            color = Color(0xFFE65100),
-                                            fontWeight = FontWeight.Medium,
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                    }
+                                    Text(
+                                        text = "Advertencia: Te encuentras a ${state.distance.toInt()}m del cliente (> 150m). La visita se registrará con la distancia auditada.",
+                                        fontSize = 12.sp,
+                                        color = Color(0xFFE65100),
+                                        fontWeight = FontWeight.Medium
+                                    )
                                 }
-                            }
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            // Botón de acción para abrir Saneamiento en modo EDICIÓN
-                            Button(
-                                onClick = { onNavigateToSaneamiento(state.client.clientId) },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(38.dp),
-                                shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF2F2F7)),
-                                contentPadding = PaddingValues(0.dp)
-                            ) {
-                                Text(
-                                    text = "Sugerir Corrección / Editar Datos",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = IosSystemBlue
-                                )
                             }
                         }
                     }
@@ -502,66 +454,110 @@ fun VisitaRegistrationScreen(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 // 3. SECCIÓN: Evidencia Fotográfica
+                val capturedPhotos by viewModel.capturedPhotos.collectAsState()
+
                 Text(
-                    text = "EVIDENCIA FOTOGRÁFICA",
+                    text = "EVIDENCIA FOTOGRÁFICA (${capturedPhotos.size})",
                     style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosLabelSecondary, letterSpacing = 0.5.sp)
                 )
                 Spacer(modifier = Modifier.height(6.dp))
 
-                if (photoCaptured && viewModel.activePhotoFile != null) {
-                    val bitmap = remember(viewModel.activePhotoFile) {
-                        BitmapFactory.decodeFile(viewModel.activePhotoFile!!.absolutePath)?.asImageBitmap()
-                    }
-                    if (bitmap != null) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(IosCardSurface)
-                                .border(0.8.dp, IosBorderSeparator, RoundedCornerShape(16.dp))
-                                .padding(10.dp)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(IosCardSurface)
+                        .border(0.8.dp, IosBorderSeparator, RoundedCornerShape(16.dp))
+                        .padding(12.dp)
+                ) {
+                    // Muestra primero las fotografías tomadas (ARRIBA)
+                    if (capturedPhotos.isNotEmpty()) {
+                        androidx.compose.foundation.lazy.LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Image(
-                                bitmap = bitmap,
-                                contentDescription = "Foto capturada",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(180.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                            )
-                            Spacer(modifier = Modifier.height(10.dp))
-                            TextButton(
-                                onClick = { dispatchCameraCapture() },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Volver a Tomar Fotografía", color = IosSystemBlue, fontWeight = FontWeight.SemiBold)
+                            items(capturedPhotos.size) { index ->
+                                val photoFile = capturedPhotos[index]
+                                val bitmap = remember(photoFile, photoFile.lastModified(), photoFile.length()) {
+                                    if (photoFile.exists() && photoFile.length() > 0) {
+                                        BitmapFactory.decodeFile(photoFile.absolutePath)?.asImageBitmap()
+                                    } else null
+                                }
+                                if (bitmap != null) {
+                                    Box(
+                                        modifier = Modifier
+                                            .width(150.dp)
+                                            .height(170.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .border(0.5.dp, IosBorderSeparator, RoundedCornerShape(12.dp))
+                                    ) {
+                                        Image(
+                                            bitmap = bitmap,
+                                            contentDescription = "Foto ${index + 1}",
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+
+                                        // Badge con número de foto
+                                        Box(
+                                            modifier = Modifier
+                                                .align(Alignment.TopStart)
+                                                .padding(6.dp)
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(Color.Black.copy(alpha = 0.6f))
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = "FOTO #${index + 1}",
+                                                color = Color.White,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+
+                                        // Botón eliminar (X)
+                                        Box(
+                                            modifier = Modifier
+                                                .align(Alignment.TopEnd)
+                                                .padding(6.dp)
+                                                .size(28.dp)
+                                                .clip(CircleShape)
+                                                .background(Color.Black.copy(alpha = 0.65f))
+                                                .clickable { viewModel.removeCapturedPhoto(photoFile) },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = "Eliminar",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
+
+                        Spacer(modifier = Modifier.height(12.dp))
                     }
-                } else {
-                    Box(
+
+                    // Botón para agregar fotografía (UBICADO DEBAJO DE LAS FOTOS)
+                    OutlinedButton(
+                        onClick = { dispatchCameraCapture() },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(120.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(IosCardSurface)
-                            .border(0.8.dp, IosBorderSeparator, RoundedCornerShape(16.dp))
-                            .clickable { dispatchCameraCapture() },
-                        contentAlignment = Alignment.Center
+                            .height(44.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        border = androidx.compose.foundation.BorderStroke(0.8.dp, IosBorderSeparator)
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Box(
-                                modifier = Modifier
-                                    .size(46.dp)
-                                    .clip(CircleShape)
-                                    .background(IosFillQuaternary),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(imageVector = Icons.Default.Add, contentDescription = null, tint = IosSystemBlue, modifier = Modifier.size(24.dp))
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("Tomar Fotografía (Obligatoria)", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = IosSystemBlue)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Add, contentDescription = null, tint = IosSystemBlue, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (capturedPhotos.isEmpty()) "Tomar Fotografía (Obligatoria)" else "+ Agregar Otra Fotografía",
+                                color = IosSystemBlue,
+                                fontWeight = FontWeight.SemiBold
+                            )
                         }
                     }
                 }
@@ -602,7 +598,7 @@ fun VisitaRegistrationScreen(
 
             // 5. Botón de Confirmación Fijo Inferior (Solo para clientes del plan emparejados)
             val isFormValid = isOperationActive &&
-                    photoCaptured &&
+                    capturedPhotos.isNotEmpty() &&
                     selectedStatus != null &&
                     selectedClient != null
 
@@ -615,14 +611,21 @@ fun VisitaRegistrationScreen(
             ) {
                 Button(
                     onClick = {
+                        if (!viewModel.isGpsEnabled()) {
+                            Toast.makeText(appContext, "El GPS debe estar encendido para guardar la visita", Toast.LENGTH_LONG).show()
+                            context.startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                            return@Button
+                        }
                         if (!isFormValid || isSaving) return@Button
                         isSaving = true
+                        val distance = (proximityState as? ProximityUiState.SingleClientMatch)?.distance?.toDouble()
                         viewModel.saveVisita(
                             selectedClient = selectedClient,
                             isOpportunity = false,
                             opportunityClientName = null,
                             status = selectedStatus,
                             comments = comments,
+                            distanceToClientMeters = distance,
                             onSuccess = {
                                 Toast.makeText(appContext, "Visita guardada correctamente", Toast.LENGTH_SHORT).show()
                                 onRegisteredSuccessfully()
@@ -651,5 +654,21 @@ fun VisitaRegistrationScreen(
                 }
             }
         }
+    }
+
+    if (showCameraPreview) {
+        val targetFile = remember(showCameraPreview) { viewModel.createPrivatePhotoFile() }
+        com.alvarosega.trackingventas.ui.camera.VisitaCameraPreview(
+            targetFile = targetFile,
+            onPhotoCaptured = {
+                viewModel.processCapturedPhoto(sellerCode) {
+                    photoCaptured = true
+                    showCameraPreview = false
+                }
+            },
+            onClose = {
+                showCameraPreview = false
+            }
+        )
     }
 }

@@ -1,14 +1,11 @@
 package com.alvarosega.trackingventas.ui.tracking
 
 import android.content.Context
-import android.content.Intent
-import android.os.Build
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.alvarosega.trackingventas.data.local.dao.LocationDao
 import com.alvarosega.trackingventas.data.local.dao.PlanRuteoDao
-import com.alvarosega.trackingventas.data.local.entity.LocationEntity
+import com.alvarosega.trackingventas.data.local.dao.VisitaDao
 import com.alvarosega.trackingventas.data.local.entity.PlanRuteoEntity
 import com.alvarosega.trackingventas.data.local.pref.SessionPreferences
 import com.alvarosega.trackingventas.data.location.LocationClient
@@ -16,7 +13,7 @@ import com.alvarosega.trackingventas.data.remote.AuthApiService
 import com.alvarosega.trackingventas.data.remote.VisitaApiService
 import com.alvarosega.trackingventas.data.remote.dto.OportunidadDto
 import com.alvarosega.trackingventas.data.remote.dto.PlanRuteoDto
-import com.alvarosega.trackingventas.service.TrackingService
+import com.alvarosega.trackingventas.data.remote.dto.toEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -34,12 +31,18 @@ enum class MapFilterType {
     TODOS, PENDIENTES, VISITADOS
 }
 
+data class LocationPoint(
+    val latitude: Double,
+    val longitude: Double,
+    val accuracy: Float = 0f
+)
+
 @HiltViewModel
 class MainMapViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val locationClient: LocationClient,
-    locationDao: LocationDao,
     private val planRuteoDao: PlanRuteoDao,
+    private val visitaDao: VisitaDao,
     private val visitaApiService: VisitaApiService,
     private val authApiService: AuthApiService,
     private val sessionPreferences: SessionPreferences
@@ -48,14 +51,8 @@ class MainMapViewModel @Inject constructor(
     val isOperationActive: StateFlow<Boolean> = sessionPreferences.isOperationActive
     val activeRoute: StateFlow<String> = sessionPreferences.activeRoute
 
-    private val _manualLocation = MutableStateFlow<LocationEntity?>(null)
-
-    val latestLocation: StateFlow<LocationEntity?> = combine(
-        locationDao.getLatestLocation(),
-        _manualLocation
-    ) { dbLoc, manualLoc ->
-        manualLoc ?: dbLoc
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    private val _latestLocation = MutableStateFlow<LocationPoint?>(null)
+    val latestLocation: StateFlow<LocationPoint?> = _latestLocation.asStateFlow()
 
     private val _selectedFilter = MutableStateFlow(MapFilterType.TODOS)
     val selectedFilter: StateFlow<MapFilterType> = _selectedFilter.asStateFlow()
@@ -134,17 +131,11 @@ class MainMapViewModel @Inject constructor(
             try {
                 val freshLocation = locationClient.getCurrentLocation()
                 if (freshLocation != null) {
-                    val updatedEntity = LocationEntity(
+                    _latestLocation.value = LocationPoint(
                         latitude = freshLocation.latitude,
                         longitude = freshLocation.longitude,
-                        accuracy = freshLocation.accuracy,
-                        speed = freshLocation.speed,
-                        batteryLevel = 0,
-                        isMock = freshLocation.isFromMockProvider,
-                        recordedAt = "",
-                        isSynced = true
+                        accuracy = freshLocation.accuracy
                     )
-                    _manualLocation.value = updatedEntity
                     _statusMessage.value = "GPS actualizado (±${freshLocation.accuracy.toInt()}m)"
 
                     withContext(Dispatchers.Main) {
@@ -174,31 +165,17 @@ class MainMapViewModel @Inject constructor(
                 if (response.isSuccessful && response.body() != null) {
                     val dtos = response.body()!!
                     Log.d("SYNC_DEBUG", "Clientes recibidos del servidor: ${dtos.size}")
-
-                    val entities = dtos.map { dto: PlanRuteoDto ->
-                        PlanRuteoEntity(
-                            clientId = dto.clientId,
-                            clientName = dto.clientName ?: "Cliente Sin Nombre",
-                            route = dto.route ?: "Sin Ruta",
-                            day = dto.day ?: "Sin Asignar",
-                            address = dto.address ?: "Sin dirección",
-                            latitude = dto.latitude ?: 0.0,
-                            longitude = dto.longitude ?: 0.0,
-                            status = dto.status ?: "Activo",
-                            isVisited = false,
-                            tipoNegocio = dto.tipoNegocio,
-                            zona = dto.zona,
-                            contacto = dto.contacto,
-                            telefono = dto.telefono,
-                            celular = dto.celular,
-                            referencia = dto.referencia,
-                            nombreFactura = dto.nombreFactura,
-                            nit = dto.nit
-                        )
+                    dtos.forEachIndexed { index, dto ->
+                        Log.d("SYNC_DEBUG", "DTO[$index]: clientId=${dto.clientId}, name=${dto.clientName}, lat=${dto.latitude}, lon=${dto.longitude}")
                     }
-                    planRuteoDao.refreshPreservingVisited(entities)
-                    Log.d("SYNC_DEBUG", "Entidades insertadas en Room: ${entities.size}")
-                    _statusMessage.value = "Ruteo sincronizado (${entities.size} puntos)"
+
+                    val entities = dtos.map { it.toEntity() }
+                    val uniqueEntities = entities.distinctBy { it.clientId }
+                    Log.d("SYNC_DEBUG", "Entidades únicas por clientId: ${uniqueEntities.size} de ${entities.size}")
+
+                    val unsyncedVisitedIds = visitaDao.getUnsyncedVisitedClientIds().toSet()
+                    planRuteoDao.refreshPreservingVisited(uniqueEntities, unsyncedVisitedIds)
+                    _statusMessage.value = "Ruteo sincronizado (${uniqueEntities.size} puntos)"
                 } else {
                     val err = response.errorBody()?.string()
                     Log.e("SYNC_DEBUG", "Error respuesta plan-ruteo ${response.code()}: $err")
@@ -221,7 +198,8 @@ class MainMapViewModel @Inject constructor(
 
                     if (response.isSuccessful) {
                         sessionPreferences.setOperationState(true)
-                        startTrackingService()
+                        androidx.work.WorkManager.getInstance(context).cancelUniqueWork("TrackingPeriodicSync")
+                        androidx.work.WorkManager.getInstance(context).cancelUniqueWork("TrackingForegroundSync")
                         _statusMessage.value = "Jornada iniciada correctamente"
                     } else {
                         val errorBody = response.errorBody()?.string() ?: ""
@@ -235,7 +213,6 @@ class MainMapViewModel @Inject constructor(
             }
         } else {
             sessionPreferences.setOperationState(false)
-            stopTrackingService()
             viewModelScope.launch(Dispatchers.IO) {
                 try {
                     val response = authApiService.stopWorkday()
@@ -246,24 +223,6 @@ class MainMapViewModel @Inject constructor(
                 }
             }
         }
-    }
-
-    private fun startTrackingService() {
-        val intent = Intent(context, TrackingService::class.java).apply {
-            action = TrackingService.ACTION_START
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.startForegroundService(intent)
-        } else {
-            context.startService(intent)
-        }
-    }
-
-    private fun stopTrackingService() {
-        val intent = Intent(context, TrackingService::class.java).apply {
-            action = TrackingService.ACTION_STOP
-        }
-        context.startService(intent)
     }
 
     fun logout() {

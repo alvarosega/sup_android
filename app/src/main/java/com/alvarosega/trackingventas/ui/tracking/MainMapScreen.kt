@@ -509,8 +509,13 @@ fun MainMapScreen(
 
                         Button(
                             onClick = {
+                                if (!viewModel.isGpsEnabled()) {
+                                    Toast.makeText(context, "El GPS está apagado. Debe activar la ubicación para registrar una visita.", Toast.LENGTH_LONG).show()
+                                    context.startActivity(android.content.Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                                    return@Button
+                                }
                                 val loc = latestLocation
-                                if (loc == null || !viewModel.isGpsEnabled()) {
+                                if (loc == null) {
                                     Toast.makeText(context, "Esperando señal GPS...", Toast.LENGTH_SHORT).show()
                                     return@Button
                                 }

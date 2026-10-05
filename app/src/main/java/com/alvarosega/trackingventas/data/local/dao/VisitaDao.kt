@@ -16,4 +16,10 @@ interface VisitaDao {
 
     @Query("UPDATE visitas SET isSynced = 1 WHERE id = :id")
     suspend fun markAsSynced(id: Long)
+
+    @Query("SELECT DISTINCT clientId FROM visitas WHERE clientId IS NOT NULL")
+    suspend fun getAllVisitedClientIds(): List<Long>
+
+    @Query("SELECT DISTINCT clientId FROM visitas WHERE clientId IS NOT NULL AND isSynced = 0")
+    suspend fun getUnsyncedVisitedClientIds(): List<Long>
 }

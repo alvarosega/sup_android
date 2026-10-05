@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.room.Room
 import com.alvarosega.trackingventas.data.local.AppDatabase
 import com.alvarosega.trackingventas.data.local.dao.DeviceEventDao
-import com.alvarosega.trackingventas.data.local.dao.LocationDao
 import com.alvarosega.trackingventas.data.local.dao.PlanRuteoDao
 import com.alvarosega.trackingventas.data.local.dao.VisitaDao
 import com.alvarosega.trackingventas.sanitization.data.local.dao.ClientAuditDao
@@ -19,6 +18,8 @@ import com.alvarosega.trackingventas.data.local.dao.SaneamientoDao
 import com.alvarosega.trackingventas.data.local.MIGRATION_2_3
 import com.alvarosega.trackingventas.data.local.MIGRATION_3_4
 import com.alvarosega.trackingventas.data.local.MIGRATION_2_4
+import com.alvarosega.trackingventas.data.local.MIGRATION_4_5
+import com.alvarosega.trackingventas.data.local.MIGRATION_5_6
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -30,15 +31,13 @@ object DatabaseModule {
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,
-            "tracking_ventas_db" // o el nombre que tenga tu base de datos
+            "tracking_ventas_db"
         )
-            .fallbackToDestructiveMigration() // <-- AGREGAR ESTA LÍNEA
+            .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_2_4, MIGRATION_4_5, MIGRATION_5_6)
+            .enableMultiInstanceInvalidation()
             .build()
     }
-    @Provides
-    fun provideLocationDao(database: AppDatabase): LocationDao {
-        return database.locationDao()
-    }
+
     @Provides
     fun provideSaneamientoDao(database: AppDatabase): SaneamientoDao {
         return database.saneamientoDao()

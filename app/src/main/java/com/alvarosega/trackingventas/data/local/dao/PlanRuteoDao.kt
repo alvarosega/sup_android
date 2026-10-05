@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface PlanRuteoDao {
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertIfNotExists(planes: List<PlanRuteoEntity>)
 
     @Query("SELECT * FROM plan_ruteo_local")
@@ -30,13 +30,12 @@ interface PlanRuteoDao {
     suspend fun clearPlanRuteo()
 
     @Transaction
-    suspend fun refreshPreservingVisited(remotePlanes: List<PlanRuteoEntity>) {
-        val visitedIds = getVisitedClientIds().toSet()
+    suspend fun refreshPreservingVisited(remotePlanes: List<PlanRuteoEntity>, unsyncedVisitedClientIds: Set<Long> = emptySet()) {
         val merged = remotePlanes.map { plan ->
-            if (visitedIds.contains(plan.clientId)) {
+            if (plan.isVisited || unsyncedVisitedClientIds.contains(plan.clientId)) {
                 plan.copy(isVisited = true)
             } else {
-                plan
+                plan.copy(isVisited = false)
             }
         }
         clearPlanRuteo()

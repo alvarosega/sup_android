@@ -2,8 +2,6 @@ package com.alvarosega.trackingventas.data.remote
 
 import com.alvarosega.trackingventas.data.remote.dto.LoginRequestDto
 import com.alvarosega.trackingventas.data.remote.dto.LoginResponseDto
-import com.alvarosega.trackingventas.data.remote.dto.SyncLocationsRequest
-import com.alvarosega.trackingventas.data.remote.dto.SyncResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -47,11 +45,6 @@ interface AuthApiService {
 
     @GET("api/workday/status")
     suspend fun getWorkdayStatus(): Response<WorkdayStatusResponseDto>
-
-    @POST("api/tracking/sync")
-    suspend fun syncTrackingData(
-        @Body request: SyncLocationsRequest
-    ): Response<SyncResponse>
 
     // Control de Jornada Laboral
     @POST("api/workday/start")

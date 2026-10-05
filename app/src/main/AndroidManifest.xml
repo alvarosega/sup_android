@@ -9,18 +9,13 @@
     <!-- Permisos de Ubicación -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
     <!-- Permisos de Cámara -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-permission android:name="android.permission.CAMERA" />
 
-    <!-- Permisos de Servicios en Primer Plano -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <!-- Permisos de Notificaciones -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
         android:name=".TrackingApp"
@@ -44,20 +39,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <!-- Servicio aislado en su propio proceso para sobrevivir al cierre de UI -->
-        <service
-            android:name=".service.TrackingService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="location" />
-
-        <!-- Receptor de ubicación aislado en el proceso :telemetry -->
-        <receiver
-            android:name=".service.TrackingLocationReceiver"
-            android:enabled="true"
-            android:exported="true"
-            android:process=":telemetry" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

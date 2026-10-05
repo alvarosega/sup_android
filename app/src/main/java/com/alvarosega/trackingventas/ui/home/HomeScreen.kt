@@ -72,23 +72,9 @@ fun HomeScreen(
         (context as? Activity)?.moveTaskToBack(true)
     }
 
-    LaunchedEffect(isOperationActive) {
-        while (isOperationActive) {
-            delay(60000L)
-            val constraints = androidx.work.Constraints.Builder()
-                .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
-                .build()
-
-            val syncWork = androidx.work.OneTimeWorkRequestBuilder<com.alvarosega.trackingventas.worker.SyncWorker>()
-                .setConstraints(constraints)
-                .build()
-
-            androidx.work.WorkManager.getInstance(context).enqueueUniqueWork(
-                "TrackingForegroundSync",
-                androidx.work.ExistingWorkPolicy.KEEP,
-                syncWork
-            )
-        }
+    LaunchedEffect(Unit) {
+        androidx.work.WorkManager.getInstance(context).cancelUniqueWork("TrackingPeriodicSync")
+        androidx.work.WorkManager.getInstance(context).cancelUniqueWork("TrackingForegroundSync")
     }
 
     fun checkAndStartOperation() {
