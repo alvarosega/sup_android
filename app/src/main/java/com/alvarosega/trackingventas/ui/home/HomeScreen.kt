@@ -21,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
@@ -59,13 +60,16 @@ private val IosFillQuaternary = Color(0xFFF2F2F7)
 fun HomeScreen(
     onNavigateToMap: () -> Unit,
     onLogout: () -> Unit,
-    viewModel: MainMapViewModel = hiltViewModel()
+    onNavigateToRechazos: () -> Unit = {},
+    viewModel: MainMapViewModel = hiltViewModel(),
+    rechazosViewModel: com.alvarosega.trackingventas.ui.rechazos.PedidosRechazadosViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val isOperationActive by viewModel.isOperationActive.collectAsState()
     val activeRoute by viewModel.activeRoute.collectAsState()
     val workdayLimitTime by viewModel.workdayLimitTime.collectAsState()
     val statusMsg by viewModel.statusMessage.collectAsState()
+    val pendingRechazosCount by rechazosViewModel.pendingRechazosCount.collectAsState()
 
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showStopDialog by remember { mutableStateOf(false) }
@@ -80,6 +84,7 @@ fun HomeScreen(
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                 viewModel.checkWorkdayStatus()
+                rechazosViewModel.fetchPreventasPendientes()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -92,6 +97,7 @@ fun HomeScreen(
         androidx.work.WorkManager.getInstance(context).cancelUniqueWork("TrackingPeriodicSync")
         androidx.work.WorkManager.getInstance(context).cancelUniqueWork("TrackingForegroundSync")
         viewModel.checkWorkdayStatus()
+        rechazosViewModel.fetchPreventasPendientes()
     }
 
     LaunchedEffect(isOperationActive) {
@@ -447,6 +453,108 @@ fun HomeScreen(
                     tint = IosLabelSecondary,
                     modifier = Modifier.size(if (isOperationActive) 20.dp else 18.dp)
                 )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Celda Navegable Estilo Apple Inset Grouped: Pedidos Rechazados
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(
+                        elevation = 2.dp,
+                        shape = RoundedCornerShape(16.dp),
+                        ambientColor = Color(0x08000000),
+                        spotColor = Color(0x08000000)
+                    )
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(IosCardSurface)
+                    .border(0.8.dp, IosBorderSeparator, RoundedCornerShape(16.dp))
+                    .clickable {
+                        if (!isOperationActive) {
+                            Toast.makeText(context, "Debe iniciar jornada primero", Toast.LENGTH_SHORT).show()
+                            return@clickable
+                        }
+                        if (!viewModel.isGpsEnabled()) {
+                            Toast.makeText(context, "El GPS está desactivado. Actívalo para acceder.", Toast.LENGTH_LONG).show()
+                            context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                            return@clickable
+                        }
+                        onNavigateToRechazos()
+                    }
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(46.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isOperationActive) Color(0xFFFFEBEA) else IosFillQuaternary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Pedidos Rechazados",
+                            tint = if (isOperationActive) IosSystemRed else IosLabelSecondary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(14.dp))
+
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Pedidos Rechazados",
+                                style = TextStyle(
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (isOperationActive) IosLabelPrimary else IosLabelSecondary
+                                )
+                            )
+                        }
+                        Text(
+                            text = if (isOperationActive) "Gestión y justificación de rechazos de preventas" else "Requiere jornada activa",
+                            style = TextStyle(
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Normal,
+                                color = IosLabelSecondary
+                            )
+                        )
+                    }
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (isOperationActive && pendingRechazosCount > 0) {
+                        Box(
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(IosSystemRed)
+                                .padding(horizontal = 8.dp, vertical = 3.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "$pendingRechazosCount",
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(6.dp))
+                    }
+
+                    Icon(
+                        imageVector = if (isOperationActive) Icons.AutoMirrored.Filled.KeyboardArrowRight else Icons.Default.Lock,
+                        contentDescription = null,
+                        tint = IosLabelSecondary,
+                        modifier = Modifier.size(if (isOperationActive) 20.dp else 18.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(28.dp))

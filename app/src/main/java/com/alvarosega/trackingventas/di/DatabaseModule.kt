@@ -15,11 +15,13 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 import com.alvarosega.trackingventas.data.local.dao.SaneamientoDao
+import com.alvarosega.trackingventas.data.local.dao.PedidoRechazadoDao
 import com.alvarosega.trackingventas.data.local.MIGRATION_2_3
 import com.alvarosega.trackingventas.data.local.MIGRATION_3_4
 import com.alvarosega.trackingventas.data.local.MIGRATION_2_4
 import com.alvarosega.trackingventas.data.local.MIGRATION_4_5
 import com.alvarosega.trackingventas.data.local.MIGRATION_5_6
+import com.alvarosega.trackingventas.data.local.MIGRATION_6_7
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -33,9 +35,14 @@ object DatabaseModule {
             AppDatabase::class.java,
             "tracking_ventas_db"
         )
-            .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_2_4, MIGRATION_4_5, MIGRATION_5_6)
+            .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_2_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
             .enableMultiInstanceInvalidation()
             .build()
+    }
+
+    @Provides
+    fun providePedidoRechazadoDao(database: AppDatabase): PedidoRechazadoDao {
+        return database.pedidoRechazadoDao()
     }
 
     @Provides

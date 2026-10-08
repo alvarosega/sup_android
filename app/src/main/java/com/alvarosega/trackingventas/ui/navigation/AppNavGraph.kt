@@ -11,6 +11,8 @@ import androidx.navigation.navArgument
 import com.alvarosega.trackingventas.data.local.SessionManager
 import com.alvarosega.trackingventas.ui.home.HomeScreen
 import com.alvarosega.trackingventas.ui.login.LoginScreen
+import com.alvarosega.trackingventas.ui.rechazos.PedidosRechazadosScreen
+import com.alvarosega.trackingventas.ui.rechazos.PedidosRechazadosViewModel
 import com.alvarosega.trackingventas.ui.saneamiento.SaneamientoFormScreen
 import com.alvarosega.trackingventas.ui.saneamiento.SaneamientoViewModel
 import com.alvarosega.trackingventas.ui.tracking.MainMapScreen
@@ -23,6 +25,7 @@ object Screen {
     const val MAP = "map"
     const val VISITA_REGISTRATION = "visita_registration"
     const val SANEAMIENTO_FORM = "saneamiento_form?clientId={clientId}"
+    const val PEDIDOS_RECHAZADOS = "pedidos_rechazados"
 }
 
 @Composable
@@ -56,11 +59,24 @@ fun AppNavGraph(
                 onNavigateToMap = {
                     navController.navigate(Screen.MAP)
                 },
+                onNavigateToRechazos = {
+                    navController.navigate(Screen.PEDIDOS_RECHAZADOS)
+                },
                 onLogout = {
                     sessionManager.clearSession()
                     navController.navigate(Screen.LOGIN) {
                         popUpTo(Screen.HOME) { inclusive = true }
                     }
+                }
+            )
+        }
+
+        composable(Screen.PEDIDOS_RECHAZADOS) {
+            val rechazosViewModel: PedidosRechazadosViewModel = hiltViewModel()
+            PedidosRechazadosScreen(
+                viewModel = rechazosViewModel,
+                onNavigateBack = {
+                    navController.popBackStack()
                 }
             )
         }

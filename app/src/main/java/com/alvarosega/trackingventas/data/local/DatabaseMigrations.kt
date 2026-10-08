@@ -36,3 +36,29 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
         db.execSQL("ALTER TABLE `visitas` ADD COLUMN `isMockLocation` INTEGER NOT NULL DEFAULT 0")
     }
 }
+
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS `pedidos_rechazados_local` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `uuid` TEXT NOT NULL,
+                `clienteId` TEXT NOT NULL,
+                `clienteNombre` TEXT,
+                `nroPreventa` TEXT,
+                `fechaPreventa` TEXT,
+                `fechaRechazo` TEXT NOT NULL,
+                `motivo` TEXT NOT NULL,
+                `tipoRechazo` TEXT NOT NULL,
+                `comentarios` TEXT,
+                `latitude` REAL,
+                `longitude` REAL,
+                `accuracy` REAL,
+                `isMockLocation` INTEGER NOT NULL DEFAULT 0,
+                `localPhotoPath` TEXT,
+                `itemsJson` TEXT NOT NULL,
+                `isSynced` INTEGER NOT NULL DEFAULT 0
+            )
+        """.trimIndent())
+    }
+}

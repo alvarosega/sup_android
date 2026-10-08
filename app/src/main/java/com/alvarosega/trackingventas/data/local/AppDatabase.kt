@@ -14,6 +14,8 @@ import com.alvarosega.trackingventas.sanitization.data.local.entity.ClientAuditE
 import com.alvarosega.trackingventas.sanitization.data.local.entity.ReferenceClientEntity
 import com.alvarosega.trackingventas.data.local.dao.SaneamientoDao
 import com.alvarosega.trackingventas.data.local.entity.SaneamientoBaseEntity
+import com.alvarosega.trackingventas.data.local.dao.PedidoRechazadoDao
+import com.alvarosega.trackingventas.data.local.entity.PedidoRechazadoEntity
 
 
 @Database(
@@ -23,9 +25,10 @@ import com.alvarosega.trackingventas.data.local.entity.SaneamientoBaseEntity
         VisitaEntity::class,
         ReferenceClientEntity::class,
         ClientAuditEntity::class,
-        SaneamientoBaseEntity::class
+        SaneamientoBaseEntity::class,
+        PedidoRechazadoEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -35,4 +38,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun referenceClientDao(): ReferenceClientDao
     abstract fun clientAuditDao(): ClientAuditDao
     abstract fun saneamientoDao(): SaneamientoDao
+    abstract fun pedidoRechazadoDao(): PedidoRechazadoDao
 }
