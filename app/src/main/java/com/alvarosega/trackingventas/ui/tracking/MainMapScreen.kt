@@ -145,13 +145,17 @@ fun MainMapScreen(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_RESUME -> mapView.onResume()
+                Lifecycle.Event.ON_RESUME -> {
+                    mapView.onResume()
+                    viewModel.forceRefreshGps()
+                }
                 Lifecycle.Event.ON_PAUSE -> mapView.onPause()
                 else -> {}
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         mapView.onResume()
+        viewModel.forceRefreshGps()
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
             mapView.onPause()
@@ -726,20 +730,23 @@ fun MainMapScreen(
                 if (clientsSortedByDistance.isNotEmpty()) {
                     val pagerState = rememberPagerState(pageCount = { clientsSortedByDistance.size })
 
-                    // Sincronizar el cliente seleccionado al deslizar en el pager
-                    LaunchedEffect(pagerState.currentPage, clientsSortedByDistance) {
-                        if (clientsSortedByDistance.isNotEmpty() && pagerState.currentPage in clientsSortedByDistance.indices) {
-                            val activeClient = clientsSortedByDistance[pagerState.currentPage]
-                            selectedClient = activeClient
+                    // Sincronización limpia cuando el pager se ASienta en una página (settledPage) para evitar brincos
+                    LaunchedEffect(pagerState.settledPage, clientsSortedByDistance) {
+                        if (clientsSortedByDistance.isNotEmpty() && pagerState.settledPage in clientsSortedByDistance.indices) {
+                            val activeClient = clientsSortedByDistance[pagerState.settledPage]
+                            if (selectedClient?.clientId != activeClient.clientId) {
+                                selectedClient = activeClient
+                                mapView.controller.animateTo(GeoPoint(activeClient.latitude, activeClient.longitude))
+                            }
                         }
                     }
 
-                    // Sincronizar el pager cuando el usuario toca un pin en el mapa
+                    // Sincronizar el pager de forma instantánea al tocar un pin en el mapa
                     LaunchedEffect(selectedClient) {
                         selectedClient?.let { sc ->
                             val targetIndex = clientsSortedByDistance.indexOf(sc)
                             if (targetIndex >= 0 && targetIndex != pagerState.currentPage) {
-                                pagerState.animateScrollToPage(targetIndex)
+                                pagerState.scrollToPage(targetIndex)
                             }
                         }
                     }
