@@ -95,6 +95,8 @@ fun SaneamientoFormScreen(
         }
     }
 
+
+
     fun dispatchCameraCapture() {
         val hasPermission = ContextCompat.checkSelfPermission(
             context,
@@ -109,20 +111,32 @@ fun SaneamientoFormScreen(
     }
 
     // Estados de validación individual de campos obligatorios
-    val isClienteValid = formState.cliente.isNotBlank() &&
-            !Regex("[#$+%_=<>{}\\[\\]\\^]").containsMatchIn(formState.cliente)
+    val clienteWords = formState.cliente.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+    val isClienteOnlyLetters = Regex("^[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+$").matches(formState.cliente.trim())
+    val isClienteValid = clienteWords.size >= 2 && isClienteOnlyLetters
+
     val isTipoNegocioValid = formState.tipoNegocio.isNotBlank()
     val isZonaValid = formState.zona.isNotBlank()
+
     val digitsCel = formState.celular.filter { it.isDigit() }
     val isCelularValid = digitsCel.length in 7..8
-    val isNombreFacturaValid = formState.nombreFactura.isNotBlank()
+
+    val direccionWords = formState.direccion.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+    val isDireccionValid = direccionWords.size >= 3 &&
+            !Regex("[#$+%_=<>{}\\[\\]\\^~|\\\\*;!]").containsMatchIn(formState.direccion)
+
+    val nombreFacturaWords = formState.nombreFactura.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+    val isNombreFacturaValid = nombreFacturaWords.isNotEmpty() &&
+            !Regex("[#$+%_=<>{}\\[\\]\\^~|\\\\*;!]").containsMatchIn(formState.nombreFactura)
+
     val digitsNit = formState.nit.filter { it.isDigit() }
-    val isNitValid = formState.nit.isNotBlank() && digitsNit.isNotEmpty() && formState.nit.all { it.isDigit() }
+    val isNitValid = formState.nit.isNotBlank() && digitsNit.isNotEmpty() && formState.nit.all { it.isDigit() } &&
+            (digitsNit == "0" || digitsNit.length >= 5)
 
     val isFormValid = if (formState.esEdicion) {
-        isClienteValid && isTipoNegocioValid && isZonaValid && isCelularValid && isNombreFacturaValid && isNitValid
+        isClienteValid && isTipoNegocioValid && isZonaValid && isCelularValid && isDireccionValid && isNombreFacturaValid && isNitValid
     } else {
-        isClienteValid && isTipoNegocioValid && isZonaValid && isCelularValid && isNombreFacturaValid && isNitValid &&
+        isClienteValid && isTipoNegocioValid && isZonaValid && isCelularValid && isDireccionValid && isNombreFacturaValid && isNitValid &&
                 formState.photoCaptured && formState.gpsReady
     }
 
@@ -131,7 +145,6 @@ fun SaneamientoFormScreen(
             .fillMaxSize()
             .background(IosBackgroundGrouped)
             .statusBarsPadding()
-            .navigationBarsPadding()
             .imePadding()
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -204,7 +217,7 @@ fun SaneamientoFormScreen(
 
                     // Nombre o Razón Social (OBLIGATORIO)
                     AppleProFieldContainer(
-                        label = "Nombre o Razón Social",
+                        label = "Nombre y Apellido Paterno (ej. Juan Perez)",
                         isMandatory = true,
                         isValid = isClienteValid
                     ) {
@@ -358,11 +371,11 @@ fun SaneamientoFormScreen(
                         )
                     }
 
-                    // Dirección (OPCIONAL)
+                    // Dirección (OBLIGATORIA)
                     AppleProFieldContainer(
-                        label = "Dirección",
-                        isMandatory = false,
-                        isValid = true
+                        label = "Dirección (Mínimo 3 palabras)",
+                        isMandatory = true,
+                        isValid = isDireccionValid
                     ) {
                         BasicTextField(
                             value = formState.direccion,
@@ -416,7 +429,7 @@ fun SaneamientoFormScreen(
 
                     // NIT / CI (OBLIGATORIO)
                     AppleProFieldContainer(
-                        label = "NIT / CI Facturación (0 si no tiene)",
+                        label = "NIT / CI (Mínimo 5 dígitos, 0 si no tiene)",
                         isMandatory = true,
                         isValid = isNitValid
                     ) {
@@ -437,11 +450,129 @@ fun SaneamientoFormScreen(
 
                 // SECCIÓN 4: EVIDENCIA Y GPS (SOLO ALTA)
                 if (!formState.esEdicion) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(
                             text = "EVIDENCIA FOTOGRÁFICA Y GPS",
                             style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosLabelSecondary, letterSpacing = 0.5.sp)
                         )
+
+                        // Tarjeta de Mini Mapa Visual Embebido
+                        val loc by viewModel.capturedLocation.collectAsState()
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(IosCardSurface)
+                                .border(1.dp, if (formState.gpsReady && loc != null) IosBorderSeparator else IosSystemAmber, RoundedCornerShape(12.dp))
+                                .padding(12.dp)
+                        ) {
+                            Column {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("UBICACIÓN EN EL MAPA", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosLabelSecondary, letterSpacing = 0.5.sp)
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(if (formState.gpsReady && loc != null) IosGreenBackground else IosAmberBackground)
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = if (formState.gpsReady && loc != null) "UBICACIÓN FIJADA" else "BUSCANDO GPS",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (formState.gpsReady && loc != null) IosSystemGreen else IosSystemAmber
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text("Toque o mueva el mapa para situar la entrada del comercio:", fontSize = 12.sp, color = IosLabelSecondary)
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                // Mini Mapa OSM Embebido en el Formulario
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(180.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .border(0.8.dp, IosBorderSeparator, RoundedCornerShape(10.dp))
+                                ) {
+                                    if (loc != null) {
+                                        androidx.compose.ui.viewinterop.AndroidView(
+                                            factory = { ctx ->
+                                                org.osmdroid.views.MapView(ctx).apply {
+                                                    setMultiTouchControls(true)
+                                                    controller.setZoom(18.5)
+                                                    val startPoint = org.osmdroid.util.GeoPoint(loc!!.latitude, loc!!.longitude)
+                                                    controller.setCenter(startPoint)
+
+                                                    val marker = org.osmdroid.views.overlay.Marker(this).apply {
+                                                        position = startPoint
+                                                        title = null
+                                                        snippet = null
+                                                        infoWindow = null
+                                                        setAnchor(org.osmdroid.views.overlay.Marker.ANCHOR_CENTER, org.osmdroid.views.overlay.Marker.ANCHOR_BOTTOM)
+                                                    }
+                                                    overlays.add(marker)
+
+                                                    val mapEventsReceiver = object : org.osmdroid.events.MapEventsReceiver {
+                                                        override fun singleTapConfirmedHelper(p: org.osmdroid.util.GeoPoint?): Boolean {
+                                                            if (p != null) {
+                                                                marker.position = p
+                                                                viewModel.setManualLocation(p.latitude, p.longitude)
+                                                                invalidate()
+                                                            }
+                                                            return true
+                                                        }
+
+                                                        override fun longPressHelper(p: org.osmdroid.util.GeoPoint?): Boolean {
+                                                            if (p != null) {
+                                                                marker.position = p
+                                                                viewModel.setManualLocation(p.latitude, p.longitude)
+                                                                invalidate()
+                                                            }
+                                                            return true
+                                                        }
+                                                    }
+                                                    overlays.add(org.osmdroid.views.overlay.MapEventsOverlay(mapEventsReceiver))
+                                                }
+                                            },
+                                            update = { mapView ->
+                                                loc?.let { l ->
+                                                    val p = org.osmdroid.util.GeoPoint(l.latitude, l.longitude)
+                                                    mapView.controller.setCenter(p)
+                                                    mapView.overlays.filterIsInstance<org.osmdroid.views.overlay.Marker>().firstOrNull()?.position = p
+                                                    mapView.invalidate()
+                                                }
+                                            },
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    } else {
+                                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                CircularProgressIndicator(color = IosSystemAmber, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text("Cargando señal GPS...", fontSize = 12.sp, color = IosSystemAmber)
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                OutlinedButton(
+                                    onClick = { viewModel.capturarGpsParaAlta() },
+                                    modifier = Modifier.fillMaxWidth().height(38.dp),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("Recalcular a Mi GPS Actual", fontSize = 12.sp, color = IosSystemBlue, fontWeight = FontWeight.SemiBold)
+                                }
+                            }
+                        }
 
                         val isPhotoValid = formState.photoCaptured && viewModel.activePhotoFile != null
 
@@ -524,7 +655,7 @@ fun SaneamientoFormScreen(
                                         Spacer(modifier = Modifier.width(10.dp))
                                         Column {
                                             Text("Tomar Foto de Fachada", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = IosLabelPrimary)
-                                            Text("Evidencia física obligatoria", fontSize = 11.sp, color = IosLabelSecondary)
+                                            Text("Fotografía de la fachada comercial", fontSize = 11.sp, color = IosLabelSecondary)
                                         }
                                     }
 

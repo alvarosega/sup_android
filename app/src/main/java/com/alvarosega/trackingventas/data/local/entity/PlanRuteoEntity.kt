@@ -2,6 +2,8 @@ package com.alvarosega.trackingventas.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 
 @Entity(tableName = "plan_ruteo_local")
 data class PlanRuteoEntity(
@@ -23,14 +25,30 @@ data class PlanRuteoEntity(
     val referencia: String? = null,
     val nombreFactura: String? = null,
     val nit: String? = null,
-    val hasPendingReview: Boolean = false
+    val hasPendingReview: Boolean = false,
+    val requiereSaneamiento: Boolean = false,
+    val saneamientoObligatorio: Boolean = false,
+    val saneamientoAlertasJson: String? = null,
+    val saneamientoCamposJson: String? = null,
+    val calidadScore: Int? = null
 )
 
+fun PlanRuteoEntity.getSaneamientoAlertas(): List<String> {
+    if (saneamientoAlertasJson.isNullOrBlank()) return emptyList()
+    return try {
+        val type = object : TypeToken<List<String>>() {}.type
+        Gson().fromJson(saneamientoAlertasJson, type) ?: emptyList()
+    } catch (e: Exception) {
+        emptyList()
+    }
+}
+
 /**
- * Evalúa si el registro contiene datos faltantes o con formato corrupto.
- * Retorna true si requiere corrección obligatoria por parte del vendedor.
+ * Evalúa si el registro requiere saneamiento/corrección de datos.
  */
 fun PlanRuteoEntity.requiereCorreccion(): Boolean {
+    if (requiereSaneamiento || saneamientoObligatorio) return true
+
     // 1. Cliente: No vacío, sin símbolos extraños (#, $, +, %, etc.)
     val clienteLimpio = clientName.isNotBlank() &&
             clientName != "Cliente Sin Nombre" &&

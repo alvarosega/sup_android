@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -70,6 +71,7 @@ fun HomeScreen(
     val workdayLimitTime by viewModel.workdayLimitTime.collectAsState()
     val statusMsg by viewModel.statusMessage.collectAsState()
     val pendingRechazosCount by rechazosViewModel.pendingRechazosCount.collectAsState()
+    val activeModules by viewModel.activeModules.collectAsState()
 
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showStopDialog by remember { mutableStateOf(false) }
@@ -230,22 +232,51 @@ fun HomeScreen(
                     )
                 }
 
-                // Botón Salir / Logout Estilo iOS Circle
-                Box(
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(CircleShape)
-                        .background(IosCardSurface)
-                        .border(0.8.dp, IosBorderSeparator, CircleShape)
-                        .clickable { showLogoutDialog = true },
-                    contentAlignment = Alignment.Center
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                        contentDescription = "Cerrar Sesión",
-                        tint = IosSystemRed,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    // Botón Refrescar / Sincronizar Permisos y Datos Manualmente
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(IosCardSurface)
+                            .border(0.8.dp, IosBorderSeparator, CircleShape)
+                            .clickable {
+                                viewModel.refreshAppModules()
+                                viewModel.syncPlanRuteo()
+                                viewModel.checkWorkdayStatus()
+                                rechazosViewModel.fetchPreventasPendientes()
+                                Toast.makeText(context, "Sincronizando permisos y datos...", Toast.LENGTH_SHORT).show()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Sincronizar Permisos",
+                            tint = IosSystemBlue,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // Botón Salir / Logout Estilo iOS Circle
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(IosCardSurface)
+                            .border(0.8.dp, IosBorderSeparator, CircleShape)
+                            .clickable { showLogoutDialog = true },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                            contentDescription = "Cerrar Sesión",
+                            tint = IosSystemRed,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
 
@@ -305,22 +336,7 @@ fun HomeScreen(
                         )
                     }
 
-                    // Badge de Estado
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (isOperationActive) IosSystemGreenLight else IosFillQuaternary)
-                            .padding(horizontal = 10.dp, vertical = 5.dp)
-                    ) {
-                        Text(
-                            text = if (isOperationActive) "GPS Activo" else "Offline",
-                            style = TextStyle(
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (isOperationActive) IosSystemGreen else IosLabelSecondary
-                            )
-                        )
-                    }
+
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -377,7 +393,9 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Celda Navegable Estilo Apple Inset Grouped
+            val isVisitasModuleActive = viewModel.isModuleActive("visitas") || viewModel.isModuleActive("ruteo")
+
+            // Celda Navegable Estilo Apple Inset Grouped: Visitas
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -388,9 +406,13 @@ fun HomeScreen(
                         spotColor = Color(0x08000000)
                     )
                     .clip(RoundedCornerShape(16.dp))
-                    .background(IosCardSurface)
+                    .background(if (isVisitasModuleActive && isOperationActive) IosCardSurface else IosFillQuaternary)
                     .border(0.8.dp, IosBorderSeparator, RoundedCornerShape(16.dp))
                     .clickable {
+                        if (!isVisitasModuleActive) {
+                            Toast.makeText(context, "Módulo de Visitas deshabilitado para tu ruta por supervisión", Toast.LENGTH_SHORT).show()
+                            return@clickable
+                        }
                         if (!isOperationActive) {
                             Toast.makeText(context, "Debe iniciar jornada primero", Toast.LENGTH_SHORT).show()
                             return@clickable
@@ -414,13 +436,13 @@ fun HomeScreen(
                         modifier = Modifier
                             .size(46.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (isOperationActive) Color(0xFFE8F1FF) else IosFillQuaternary),
+                            .background(if (isVisitasModuleActive && isOperationActive) Color(0xFFE8F1FF) else IosFillQuaternary),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Place,
-                            contentDescription = "Plan de Ruta",
-                            tint = if (isOperationActive) IosSystemBlue else IosLabelSecondary,
+                            imageVector = if (isVisitasModuleActive) Icons.Default.Place else Icons.Default.Lock,
+                            contentDescription = "Visitas",
+                            tint = if (isVisitasModuleActive && isOperationActive) IosSystemBlue else IosLabelSecondary,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -429,15 +451,19 @@ fun HomeScreen(
 
                     Column {
                         Text(
-                            text = "Plan de Ruta y Visitas",
+                            text = "Visitas",
                             style = TextStyle(
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = if (isOperationActive) IosLabelPrimary else IosLabelSecondary
+                                color = if (isVisitasModuleActive && isOperationActive) IosLabelPrimary else IosLabelSecondary
                             )
                         )
                         Text(
-                            text = if (isOperationActive) "Visualizar mapa y clientes asignados" else "Requiere jornada activa",
+                            text = when {
+                                !isVisitasModuleActive -> "Deshabilitado por supervisión"
+                                !isOperationActive -> "Requiere jornada activa"
+                                else -> "Visualizar mapa y registrar atención"
+                            },
                             style = TextStyle(
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Normal,
@@ -448,14 +474,16 @@ fun HomeScreen(
                 }
 
                 Icon(
-                    imageVector = if (isOperationActive) Icons.AutoMirrored.Filled.KeyboardArrowRight else Icons.Default.Lock,
+                    imageVector = if (isVisitasModuleActive && isOperationActive) Icons.AutoMirrored.Filled.KeyboardArrowRight else Icons.Default.Lock,
                     contentDescription = null,
                     tint = IosLabelSecondary,
-                    modifier = Modifier.size(if (isOperationActive) 20.dp else 18.dp)
+                    modifier = Modifier.size(if (isVisitasModuleActive && isOperationActive) 20.dp else 18.dp)
                 )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
+
+            val isRechazosModuleActive = viewModel.isModuleActive("pedidos_rechazados")
 
             // Celda Navegable Estilo Apple Inset Grouped: Pedidos Rechazados
             Row(
@@ -468,16 +496,11 @@ fun HomeScreen(
                         spotColor = Color(0x08000000)
                     )
                     .clip(RoundedCornerShape(16.dp))
-                    .background(IosCardSurface)
+                    .background(if (isRechazosModuleActive) IosCardSurface else IosFillQuaternary)
                     .border(0.8.dp, IosBorderSeparator, RoundedCornerShape(16.dp))
                     .clickable {
-                        if (!isOperationActive) {
-                            Toast.makeText(context, "Debe iniciar jornada primero", Toast.LENGTH_SHORT).show()
-                            return@clickable
-                        }
-                        if (!viewModel.isGpsEnabled()) {
-                            Toast.makeText(context, "El GPS está desactivado. Actívalo para acceder.", Toast.LENGTH_LONG).show()
-                            context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                        if (!isRechazosModuleActive) {
+                            Toast.makeText(context, "Módulo de Pedidos Rechazados deshabilitado para tu ruta por supervisión", Toast.LENGTH_SHORT).show()
                             return@clickable
                         }
                         onNavigateToRechazos()
@@ -494,13 +517,13 @@ fun HomeScreen(
                         modifier = Modifier
                             .size(46.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (isOperationActive) Color(0xFFFFEBEA) else IosFillQuaternary),
+                            .background(if (isRechazosModuleActive) Color(0xFFFFEBEA) else IosFillQuaternary),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Close,
+                            imageVector = if (isRechazosModuleActive) Icons.Default.Close else Icons.Default.Lock,
                             contentDescription = "Pedidos Rechazados",
-                            tint = if (isOperationActive) IosSystemRed else IosLabelSecondary,
+                            tint = if (isRechazosModuleActive) IosSystemRed else IosLabelSecondary,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -514,12 +537,12 @@ fun HomeScreen(
                                 style = TextStyle(
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = if (isOperationActive) IosLabelPrimary else IosLabelSecondary
+                                    color = if (isRechazosModuleActive) IosLabelPrimary else IosLabelSecondary
                                 )
                             )
                         }
                         Text(
-                            text = if (isOperationActive) "Gestión y justificación de rechazos de preventas" else "Requiere jornada activa",
+                            text = if (isRechazosModuleActive) "Gestión y justificación de rechazos de preventas" else "Deshabilitado por supervisión",
                             style = TextStyle(
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Normal,
@@ -530,7 +553,7 @@ fun HomeScreen(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (isOperationActive && pendingRechazosCount > 0) {
+                    if (isRechazosModuleActive && pendingRechazosCount > 0) {
                         Box(
                             modifier = Modifier
                                 .clip(CircleShape)
@@ -549,10 +572,10 @@ fun HomeScreen(
                     }
 
                     Icon(
-                        imageVector = if (isOperationActive) Icons.AutoMirrored.Filled.KeyboardArrowRight else Icons.Default.Lock,
+                        imageVector = if (isRechazosModuleActive) Icons.AutoMirrored.Filled.KeyboardArrowRight else Icons.Default.Lock,
                         contentDescription = null,
                         tint = IosLabelSecondary,
-                        modifier = Modifier.size(if (isOperationActive) 20.dp else 18.dp)
+                        modifier = Modifier.size(if (isRechazosModuleActive) 20.dp else 18.dp)
                     )
                 }
             }

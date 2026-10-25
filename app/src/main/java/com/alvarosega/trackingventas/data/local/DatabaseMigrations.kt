@@ -62,3 +62,34 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
         """.trimIndent())
     }
 }
+
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS `inventario_cliente_local` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `uuid` TEXT NOT NULL,
+                `clienteId` TEXT NOT NULL,
+                `clienteNombre` TEXT,
+                `latitude` REAL,
+                `longitude` REAL,
+                `accuracy` REAL,
+                `isMockLocation` INTEGER NOT NULL DEFAULT 0,
+                `comments` TEXT,
+                `itemsJson` TEXT NOT NULL,
+                `createdAt` TEXT NOT NULL,
+                `isSynced` INTEGER NOT NULL DEFAULT 0
+            )
+        """.trimIndent())
+    }
+}
+
+val MIGRATION_8_9 = object : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `plan_ruteo_local` ADD COLUMN `requiereSaneamiento` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE `plan_ruteo_local` ADD COLUMN `saneamientoObligatorio` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE `plan_ruteo_local` ADD COLUMN `saneamientoAlertasJson` TEXT DEFAULT NULL")
+        db.execSQL("ALTER TABLE `plan_ruteo_local` ADD COLUMN `saneamientoCamposJson` TEXT DEFAULT NULL")
+        db.execSQL("ALTER TABLE `plan_ruteo_local` ADD COLUMN `calidadScore` INTEGER DEFAULT NULL")
+    }
+}

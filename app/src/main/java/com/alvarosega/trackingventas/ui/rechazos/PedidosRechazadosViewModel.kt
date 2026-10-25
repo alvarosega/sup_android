@@ -27,9 +27,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -66,7 +68,11 @@ class PedidosRechazadosViewModel @Inject constructor(
     val pendingRechazosCount: StateFlow<Int> = _pendingRechazosCount.asStateFlow()
 
     val localRechazos: StateFlow<List<PedidoRechazadoEntity>> =
-        pedidoRechazadoDao.getAllLocalRechazos().toStateFlow(emptyList())
+        pedidoRechazadoDao.getAllLocalRechazos().stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
     private val _clientsList = MutableStateFlow<List<PlanRuteoEntity>>(emptyList())
     val clientsList: StateFlow<List<PlanRuteoEntity>> = _clientsList.asStateFlow()
@@ -184,16 +190,15 @@ class PedidosRechazadosViewModel @Inject constructor(
         _selectedPreventa.value = preventa
         val tipo = preventa.tipoSugerido ?: if ((preventa.montoTotalFacturado ?: 0.0) == 0.0) "TOTAL" else "PARCIAL"
         _tipoRechazo.value = tipo
-        if (tipo == "PARCIAL") {
-            _motivosList.value.firstOrNull { it.codigo == "RECHAZO_PARCIAL" }?.let {
-                _selectedMotivo.value = it
-            }
+        if (_selectedMotivo.value == null && _motivosList.value.isNotEmpty()) {
+            _selectedMotivo.value = _motivosList.value.first()
         }
         updateItemsState(preventa, tipo)
     }
 
     private fun updateItemsState(preventa: PreventaPendienteDto, tipo: String) {
-        val editables = preventa.items.map { item ->
+        val rawItems = preventa.items ?: emptyList()
+        val editables = rawItems.map { item ->
             val cantRechazada = if (tipo == "TOTAL") {
                 item.cantidadPreventa
             } else {
@@ -233,6 +238,23 @@ class PedidosRechazadosViewModel @Inject constructor(
     fun removeCapturedPhoto() {
         _capturedPhotoFile.value?.let { if (it.exists()) it.delete() }
         _capturedPhotoFile.value = null
+    }
+
+    fun savePhotoFromGalleryUri(uri: android.net.Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val destinationFile = createPrivatePhotoFile()
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    destinationFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                _capturedPhotoFile.value = destinationFile
+            } catch (e: Exception) {
+                Log.e(TAG, "Error guardando foto desde galería", e)
+                _statusMessage.value = "Error al seleccionar imagen de galería"
+            }
+        }
     }
 
     fun isGpsEnabled(): Boolean = locationClient.isGpsEnabled()

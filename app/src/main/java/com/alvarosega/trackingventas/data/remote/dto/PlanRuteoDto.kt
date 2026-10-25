@@ -1,6 +1,7 @@
 package com.alvarosega.trackingventas.data.remote.dto
 
 import com.alvarosega.trackingventas.data.local.entity.PlanRuteoEntity
+import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 
 data class PlanRuteoDto(
@@ -13,7 +14,7 @@ data class PlanRuteoDto(
     @SerializedName("longitud") val longitude: Double?,
     @SerializedName("estado") val status: String?,
 
-    // Columnas adicionales para saneamiento
+    // Columnas adicionales para saneamiento y calidad
     @SerializedName("is_visited") val isVisited: Boolean? = null,
     @SerializedName("visitado") val visitado: Boolean? = null,
     @SerializedName("tipo_negocio") val tipoNegocio: String?,
@@ -24,11 +25,22 @@ data class PlanRuteoDto(
     @SerializedName("referencia") val referencia: String?,
     @SerializedName("nombre_factura") val nombreFactura: String?,
     @SerializedName("nit") val nit: String?,
-    @SerializedName("tiene_edicion_pendiente") val tieneEdicionPendiente: Boolean? = null
+    @SerializedName("tiene_edicion_pendiente") val tieneEdicionPendiente: Boolean? = null,
+
+    // Nuevas alertas de saneamiento enviadas desde Laravel
+    @SerializedName("requiere_saneamiento") val requiereSaneamiento: Boolean? = false,
+    @SerializedName("saneamiento_obligatorio") val saneamientoObligatorio: Boolean? = false,
+    @SerializedName("saneamiento_alertas") val saneamientoAlertas: List<String>? = emptyList(),
+    @SerializedName("saneamiento_campos_incompletos") val saneamientoCamposIncompletos: List<String>? = emptyList(),
+    @SerializedName("calidad_score") val calidadScore: Int? = null
 )
 
 fun PlanRuteoDto.toEntity(): PlanRuteoEntity {
     val serverIsVisited = this.isVisited == true || this.visitado == true || this.status.equals("VISITADO", ignoreCase = true)
+    val gson = Gson()
+    val alertasJson = if (!this.saneamientoAlertas.isNullOrEmpty()) gson.toJson(this.saneamientoAlertas) else null
+    val camposJson = if (!this.saneamientoCamposIncompletos.isNullOrEmpty()) gson.toJson(this.saneamientoCamposIncompletos) else null
+
     return PlanRuteoEntity(
         clientId = this.clientId,
         clientName = this.clientName ?: "Sin Nombre Comercial",
@@ -47,6 +59,11 @@ fun PlanRuteoDto.toEntity(): PlanRuteoEntity {
         referencia = this.referencia,
         nombreFactura = this.nombreFactura,
         nit = this.nit,
-        hasPendingReview = this.tieneEdicionPendiente ?: false
+        hasPendingReview = this.tieneEdicionPendiente ?: false,
+        requiereSaneamiento = (this.requiereSaneamiento == true || this.saneamientoObligatorio == true),
+        saneamientoObligatorio = this.saneamientoObligatorio ?: false,
+        saneamientoAlertasJson = alertasJson,
+        saneamientoCamposJson = camposJson,
+        calidadScore = this.calidadScore
     )
 }

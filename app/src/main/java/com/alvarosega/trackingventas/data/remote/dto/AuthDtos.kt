@@ -8,7 +8,7 @@ data class LoginRequestDto(
 )
 
 data class LoginResponseDto(
-    @SerializedName("message") val message: String,
+    @SerializedName("message") val message: String?,
     @SerializedName("data") val data: AuthDataDto
 )
 
@@ -19,14 +19,20 @@ data class AuthDataDto(
 
 data class UserDto(
     @SerializedName("id") val id: Long,
-    @SerializedName("role_id") val roleId: Long,
+    @SerializedName("role_id") val roleId: Long?,
     @SerializedName("username") val username: String,
-    @SerializedName("is_active") val isActive: Boolean,
-    @SerializedName("role") val role: RoleDto
+    @SerializedName("ruta") val ruta: String?,
+    @SerializedName("is_active") val isActive: Boolean?,
+    @SerializedName("role") val role: RoleDto?
 )
 
 data class RoleDto(
     @SerializedName("id") val id: Long,
     @SerializedName("name") val name: String,
     @SerializedName("description") val description: String?
+)
+
+data class ErrorResponseDto(
+    @SerializedName("message") val message: String?,
+    @SerializedName("errors") val errors: Map<String, List<String>>?
 )

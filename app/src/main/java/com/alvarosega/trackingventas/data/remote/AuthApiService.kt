@@ -43,6 +43,12 @@ interface AuthApiService {
     @POST("api/login")
     suspend fun login(@Body request: LoginRequestDto): Response<LoginResponseDto>
 
+    @POST("api/logout")
+    suspend fun logout(): Response<okhttp3.ResponseBody>
+
+    @GET("api/app/modulos")
+    suspend fun getAppModules(): Response<com.alvarosega.trackingventas.data.remote.dto.ModulesResponseDto>
+
     @GET("api/workday/status")
     suspend fun getWorkdayStatus(): Response<WorkdayStatusResponseDto>
 

@@ -85,6 +85,8 @@ fun PedidosRechazadosScreen(
     var showJustifySheet by remember { mutableStateOf(false) }
     var showMotivoDropdown by remember { mutableStateOf(false) }
 
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -93,6 +95,12 @@ fun PedidosRechazadosScreen(
         } else {
             Toast.makeText(appContext, "Permiso de cámara obligatorio", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let { viewModel.savePhotoFromGalleryUri(it) }
     }
 
     LaunchedEffect(Unit) {
@@ -287,7 +295,13 @@ fun PedidosRechazadosScreen(
                         items(filteredList) { preventa ->
                         var showDetails by remember { mutableStateOf(false) }
                         val rejectedItems = remember(preventa) {
-                            preventa.itemsRechazados.ifEmpty { preventa.items.filter { (it.cantidadRechazada ?: 0) > 0 } }
+                            val list1 = preventa.itemsRechazados ?: emptyList()
+                            val list2 = preventa.items ?: emptyList()
+                            if (list1.isNotEmpty()) {
+                                list1
+                            } else {
+                                list2.filter { (it.cantidadRechazada ?: 0) > 0 }
+                            }
                         }
 
                         Column(
@@ -340,7 +354,7 @@ fun PedidosRechazadosScreen(
                                     style = TextStyle(fontSize = 13.sp, color = IosLabelSecondary)
                                 )
                                 Text(
-                                    text = "Monto Rechazado: Bs. ${preventa.montoTotalRechazado ?: 0.0} (${preventa.totalItemsRechazados ?: preventa.items.size} ítems)",
+                                    text = "Monto Rechazado: Bs. ${preventa.montoTotalRechazado ?: 0.0} (${preventa.totalItemsRechazados ?: (preventa.items?.size ?: 0)} ítems)",
                                     style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = IosSystemRed)
                                 )
                             }
@@ -497,7 +511,7 @@ fun PedidosRechazadosScreen(
 
         ModalBottomSheet(
             onDismissRequest = { showJustifySheet = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            sheetState = sheetState,
             containerColor = IosBackground
         ) {
             Column(
@@ -568,14 +582,18 @@ fun PedidosRechazadosScreen(
                         readOnly = true,
                         label = { Text("Motivo principal") },
                         trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showMotivoDropdown = true },
+                        modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = IosCardSurface,
                             unfocusedContainerColor = IosCardSurface
                         )
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clickable { showMotivoDropdown = true }
                     )
 
                     DropdownMenu(
@@ -625,34 +643,20 @@ fun PedidosRechazadosScreen(
                                 Text("Pedida: ${editable.item.cantidadPreventa} • Facturada: ${editable.item.cantidadFacturada ?: 0}", fontSize = 12.sp, color = IosSystemBlue, fontWeight = FontWeight.SemiBold)
                             }
 
-                            if (tipoRechazo == "PARCIAL") {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    IconButton(
-                                        onClick = { viewModel.updateItemCantidadRechazada(index, editable.cantidadRechazada - 1) },
-                                        modifier = Modifier.size(32.dp).clip(CircleShape).background(IosFillQuaternary)
-                                    ) {
-                                        Text("-", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                    }
-
-                                    Text(
-                                        text = "${editable.cantidadRechazada}",
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (editable.cantidadRechazada > 0) Color(0xFFFFEBEA) else IosFillQuaternary)
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = if (editable.cantidadRechazada > 0) "Rechazado: ${editable.cantidadRechazada}" else "Entregado: ${editable.item.cantidadFacturada ?: editable.item.cantidadPreventa}",
+                                    style = TextStyle(
+                                        fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 15.sp,
-                                        color = IosSystemRed
+                                        color = if (editable.cantidadRechazada > 0) IosSystemRed else IosLabelSecondary
                                     )
-
-                                    IconButton(
-                                        onClick = { viewModel.updateItemCantidadRechazada(index, editable.cantidadRechazada + 1) },
-                                        modifier = Modifier.size(32.dp).clip(CircleShape).background(IosFillQuaternary)
-                                    ) {
-                                        Text("+", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                    }
-                                }
-                            } else {
-                                Text("Rechazo: ${editable.cantidadRechazada}", fontWeight = FontWeight.Bold, color = IosSystemRed, fontSize = 13.sp)
+                                )
                             }
                         }
                     }
@@ -727,24 +731,44 @@ fun PedidosRechazadosScreen(
                         Text("Fotografía de evidencia guardada", fontSize = 13.sp, color = IosSystemGreen, fontWeight = FontWeight.SemiBold)
                     }
                 } else {
-                    Button(
-                        onClick = {
-                            val hasPermission = ContextCompat.checkSelfPermission(
-                                context, Manifest.permission.CAMERA
-                            ) == PackageManager.PERMISSION_GRANTED
-                            if (hasPermission) {
-                                showCameraPreview = true
-                            } else {
-                                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth().height(44.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = IosFillQuaternary)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = null, tint = IosSystemBlue)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Tomar Fotografía de Evidencia (Opcional)", color = IosSystemBlue, fontSize = 13.sp)
+                        Button(
+                            onClick = {
+                                val hasPermission = ContextCompat.checkSelfPermission(
+                                    context, Manifest.permission.CAMERA
+                                ) == PackageManager.PERMISSION_GRANTED
+                                if (hasPermission) {
+                                    showCameraPreview = true
+                                } else {
+                                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                                }
+                            },
+                            modifier = Modifier.weight(1f).height(44.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = IosFillQuaternary)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, tint = IosSystemBlue)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Cámara", color = IosSystemBlue, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        Button(
+                            onClick = {
+                                galleryLauncher.launch(
+                                    androidx.activity.result.PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.ImageOnly
+                                    )
+                                )
+                            },
+                            modifier = Modifier.weight(1f).height(44.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = IosFillQuaternary)
+                        ) {
+                            Text("🖼️ Galería", color = IosSystemBlue, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
 
@@ -753,10 +777,6 @@ fun PedidosRechazadosScreen(
                 // 5. BOTÓN CONFIRMAR Y ENVIAR JUSTIFICACIÓN
                 Button(
                     onClick = {
-                        if (!viewModel.isGpsEnabled()) {
-                            Toast.makeText(context, "El GPS debe estar encendido para justificar el rechazo", Toast.LENGTH_LONG).show()
-                            return@Button
-                        }
                         viewModel.guardarRechazo {
                             showJustifySheet = false
                         }

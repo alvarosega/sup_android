@@ -42,19 +42,14 @@ class RechazoSyncWorker @AssistedInject constructor(
                 val builder = MultipartBody.Builder()
                     .setType(MultipartBody.FORM)
                     .addFormDataPart("uuid", item.uuid)
-                    .addFormDataPart("cliente_id", item.clienteId)
                     .addFormDataPart("motivo", item.motivo)
-                    .addFormDataPart("tipo_rechazo", item.tipoRechazo)
-                    .addFormDataPart("items", item.itemsJson)
 
                 item.nroPreventa?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("nro_preventa", it) }
-                item.fechaPreventa?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("fecha_preventa", it) }
-                item.fechaRechazo.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("fecha_rechazo", it) }
+                item.clienteId.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("cliente_id", it) }
                 item.comentarios?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("comentarios", it) }
                 item.latitude?.let { builder.addFormDataPart("latitude", it.toString()) }
                 item.longitude?.let { builder.addFormDataPart("longitude", it.toString()) }
                 item.accuracy?.let { builder.addFormDataPart("accuracy", it.toString()) }
-                builder.addFormDataPart("is_mock_location", if (item.isMockLocation) "1" else "0")
 
                 item.localPhotoPath?.let { path ->
                     val file = File(path)

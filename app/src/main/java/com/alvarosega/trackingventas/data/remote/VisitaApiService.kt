@@ -95,4 +95,23 @@ interface VisitaApiService {
     suspend fun getHistorialRechazos(
         @Query("fecha") fecha: String? = null
     ): Response<com.alvarosega.trackingventas.data.remote.dto.HistorialResponseDto>
+
+    // ----------------------------------------------------
+    // INVENTARIO EN PDV ENDPOINTS
+    // ----------------------------------------------------
+
+    @GET("api/inventarios-cliente/historial-productos/{cliente_id}")
+    suspend fun getHistorialProductosCliente(
+        @retrofit2.http.Path("cliente_id") clienteId: String,
+        @Query("dias_historial") diasHistorial: Int? = 30
+    ): Response<com.alvarosega.trackingventas.data.remote.dto.HistorialProductosResponseDto>
+
+    @Headers(
+        "Accept: application/json",
+        "User-Agent: Mozilla/5.0 (Android; Mobile; TrackingVentas)"
+    )
+    @POST("api/inventarios-cliente")
+    suspend fun storeInventarioClienteMultipart(
+        @Body body: MultipartBody
+    ): Response<ResponseBody>
 }

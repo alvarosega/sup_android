@@ -16,6 +16,7 @@ import com.alvarosega.trackingventas.data.local.dao.DeviceEventDao
 import com.alvarosega.trackingventas.data.local.dao.PlanRuteoDao
 import com.alvarosega.trackingventas.data.local.dao.SaneamientoDao
 import com.alvarosega.trackingventas.data.local.entity.DeviceEventEntity
+import com.alvarosega.trackingventas.data.local.entity.PlanRuteoEntity
 import com.alvarosega.trackingventas.data.local.entity.SaneamientoBaseEntity
 import com.alvarosega.trackingventas.data.local.pref.SessionPreferences
 import com.alvarosega.trackingventas.data.location.LocationClient
@@ -70,8 +71,10 @@ class SaneamientoViewModel @Inject constructor(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
+    private val _capturedLocation = MutableStateFlow<Location?>(null)
+    val capturedLocation: StateFlow<Location?> = _capturedLocation.asStateFlow()
+
     var activePhotoFile: File? = null
-    var capturedLocation: Location? = null
 
     companion object {
         private const val TAG = "SANEAMIENTO_VM"
@@ -86,20 +89,30 @@ class SaneamientoViewModel @Inject constructor(
                 val saneamientoPrevio = saneamientoDao.getLatestByClient(clientId)
                 withContext(Dispatchers.Main) {
                     if (clienteOriginal != null) {
+                        val rawCliente = saneamientoPrevio?.cliente ?: clienteOriginal.clientName
+                        val rawFactura = saneamientoPrevio?.nombreFactura ?: (clienteOriginal.nombreFactura ?: "")
+                        val rawNit = saneamientoPrevio?.nit ?: (clienteOriginal.nit ?: "")
+                        val rawDireccion = saneamientoPrevio?.direccion ?: (clienteOriginal.address ?: "")
+                        val rawTipoNegocio = saneamientoPrevio?.tipoNegocio?.ifBlank { null } ?: clienteOriginal.tipoNegocio?.ifBlank { null } ?: CatalogoTiposNegocio.TIPOS.first()
+                        val rawZona = saneamientoPrevio?.zona?.ifBlank { null } ?: clienteOriginal.zona?.ifBlank { null } ?: CatalogoTiposNegocio.ZONAS.first()
+
+                        val finalFactura = if (rawFactura.isNotBlank()) rawFactura else rawCliente
+                        val finalNit = if (rawNit.isNotBlank()) rawNit else "0"
+
                         _uiState.value = SaneamientoFormState(
                             clienteId = clienteOriginal.clientId,
                             esEdicion = true,
                             route = clienteOriginal.route.ifBlank { currentRoute },
-                            cliente = saneamientoPrevio?.cliente ?: clienteOriginal.clientName,
-                            tipoNegocio = saneamientoPrevio?.tipoNegocio ?: (clienteOriginal.tipoNegocio ?: ""),
-                            zona = saneamientoPrevio?.zona ?: (clienteOriginal.zona ?: ""),
+                            cliente = rawCliente,
+                            tipoNegocio = rawTipoNegocio,
+                            zona = rawZona,
                             contacto = saneamientoPrevio?.contacto ?: (clienteOriginal.contacto ?: ""),
                             telefono = saneamientoPrevio?.telefono ?: (clienteOriginal.telefono ?: ""),
                             celular = saneamientoPrevio?.celular ?: (clienteOriginal.celular ?: ""),
-                            direccion = saneamientoPrevio?.direccion ?: (clienteOriginal.address ?: ""),
+                            direccion = rawDireccion,
                             referencia = saneamientoPrevio?.referencia ?: (clienteOriginal.referencia ?: ""),
-                            nombreFactura = saneamientoPrevio?.nombreFactura ?: (clienteOriginal.nombreFactura ?: ""),
-                            nit = saneamientoPrevio?.nit ?: (clienteOriginal.nit ?: ""),
+                            nombreFactura = finalFactura,
+                            nit = finalNit,
                             gpsReady = true
                         )
                     } else {
@@ -137,11 +150,23 @@ class SaneamientoViewModel @Inject constructor(
                 return@launch
             }
 
-            capturedLocation = loc
+            _capturedLocation.value = loc
             withContext(Dispatchers.Main) {
                 _uiState.value = _uiState.value.copy(gpsReady = true)
             }
         }
+    }
+
+    fun setManualLocation(lat: Double, lon: Double, accuracy: Float = 5.0f) {
+        val loc = Location("ManualLocation").apply {
+            latitude = lat
+            longitude = lon
+            this.accuracy = accuracy
+            time = serverTimeManager.getSecureCurrentTimeMillis()
+        }
+        _capturedLocation.value = loc
+        _uiState.value = _uiState.value.copy(gpsReady = true)
+        Log.d(TAG, "Ubicación ajustada manualmente: Lat $lat, Lon $lon (8 decimales)")
     }
 
     fun updateField(fieldUpdater: SaneamientoFormState.() -> SaneamientoFormState) {
@@ -164,7 +189,7 @@ class SaneamientoViewModel @Inject constructor(
     fun processCapturedPhoto(sellerCode: String, onComplete: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             val file = activePhotoFile
-            val loc = capturedLocation
+            val loc = _capturedLocation.value
             if (file != null && loc != null && file.exists()) {
                 val serverTime = serverTimeManager.getSecureCurrentTimeMillis()
                 loc.time = serverTime
@@ -182,59 +207,97 @@ class SaneamientoViewModel @Inject constructor(
         }
     }
 
+
+
     fun guardarRegistro(onSuccess: () -> Unit) {
         val state = _uiState.value
         if (state.isSaving) return
 
-        // 1. Validaciones básicas obligatorias (Alta y Edición)
-        if (state.cliente.isBlank()) {
-            _errorMessage.value = "El nombre o razón social es obligatorio."
+        // 1. Validaciones básicas obligatorias
+        if (state.esEdicion) {
+            // EDICIÓN DE CLIENTE EXISTENTE: Permite corregir cualquier campo manteniendo datos precargados
+            if (state.cliente.isBlank()) {
+                _errorMessage.value = "El nombre o razón social es obligatorio."
+                return
+            }
+            if (state.direccion.isBlank()) {
+                _errorMessage.value = "La dirección es obligatoria."
+                return
+            }
+            val digitsCelular = state.celular.filter { it.isDigit() }
+            if (digitsCelular.length !in 7..8) {
+                _errorMessage.value = "El celular es obligatorio y debe tener entre 7 y 8 dígitos numéricos."
+                return
+            }
+        } else {
+            // ALTA DE NUEVO CLIENTE: Validaciones estrictas de saneamiento
+            val clienteTrimmed = state.cliente.trim()
+            val clienteWords = clienteTrimmed.split(Regex("\\s+")).filter { it.isNotBlank() }
+            if (clienteWords.size < 2) {
+                _errorMessage.value = "El nombre debe incluir al menos nombre y apellido paterno (2 palabras)."
+                return
+            }
+
+            if (!Regex("^[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+$").matches(clienteTrimmed)) {
+                _errorMessage.value = "El nombre debe contener exclusivamente letras y acentos."
+                return
+            }
+
+            val direccionWords = state.direccion.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+            if (direccionWords.size < 3) {
+                _errorMessage.value = "La dirección del comercio debe tener al menos 3 palabras descriptivas."
+                return
+            }
+
+            val digitsCelular = state.celular.filter { it.isDigit() }
+            if (digitsCelular.length !in 7..8) {
+                _errorMessage.value = "El celular es obligatorio y debe tener entre 7 y 8 dígitos numéricos."
+                return
+            }
+        }
+
+        if (state.tipoNegocio.isBlank()) {
+            _errorMessage.value = "Debe seleccionar un Tipo de Negocio."
             return
         }
 
-        if (Regex("[#$+%_=<>{}\\[\\]\\^]").containsMatchIn(state.cliente)) {
-            _errorMessage.value = "El nombre contiene caracteres especiales inválidos."
+        if (state.zona.isBlank()) {
+            _errorMessage.value = "Debe seleccionar una Zona Comercial."
             return
         }
 
-        if (state.tipoNegocio.isBlank() || !CatalogoTiposNegocio.TIPOS.contains(state.tipoNegocio)) {
-            _errorMessage.value = "Debe seleccionar un Tipo de Negocio válido del catálogo."
-            return
-        }
-
-        if (state.zona.isBlank() || !CatalogoTiposNegocio.ZONAS.contains(state.zona)) {
-            _errorMessage.value = "Debe seleccionar una Zona Comercial válida del catálogo."
-            return
-        }
-
-        // 2. Celular obligatorio (Alta y Edición)
-        val digitsCelular = state.celular.filter { it.isDigit() }
-        if (digitsCelular.length !in 7..8) {
-            _errorMessage.value = "El celular es obligatorio y debe tener entre 7 y 8 dígitos numéricos."
-            return
-        }
-
-        // 3. Teléfono opcional pero limpio
+        // 4. Teléfono opcional pero limpio
         val digitsTelefono = state.telefono.filter { it.isDigit() }
         if (state.telefono.isNotBlank() && digitsTelefono.length < 7) {
             _errorMessage.value = "El teléfono fijo debe ser numérico y tener al menos 7 dígitos."
             return
         }
 
-        // 4. Facturación obligatoria tanto en Alta como en Edición
-        if (state.nombreFactura.isBlank()) {
-            _errorMessage.value = "La Razón Social / Nombre Factura es obligatoria."
+        // 5. Facturación obligatoria tanto en Alta como en Edición
+        if (state.nombreFactura.trim().isBlank()) {
+            _errorMessage.value = "La Razón Social Factura es obligatoria."
             return
         }
+
+        if (Regex("[#$+%_=<>{}\\[\\]\\^~|\\\\*;!]").containsMatchIn(state.nombreFactura)) {
+            _errorMessage.value = "La Razón Social Factura contiene símbolos inválidos."
+            return
+        }
+
         val digitsNit = state.nit.filter { it.isDigit() }
         if (state.nit.isBlank() || digitsNit.isEmpty() || !state.nit.all { it.isDigit() }) {
             _errorMessage.value = "El NIT es obligatorio y debe ser numérico (ingrese 0 si no cuenta con NIT)."
             return
         }
 
+        if (digitsNit != "0" && digitsNit.length < 5) {
+            _errorMessage.value = "El NIT debe tener al menos 5 dígitos (o ingrese 0 si no cuenta con NIT)."
+            return
+        }
+
         // 5. Exclusivo de Alta: Foto y GPS
         if (!state.esEdicion) {
-            if (capturedLocation == null) {
+            if (_capturedLocation.value == null) {
                 _errorMessage.value = "El GPS es obligatorio para un Alta."
                 return
             }
@@ -250,7 +313,7 @@ class SaneamientoViewModel @Inject constructor(
             try {
                 withContext(Dispatchers.IO) {
                     val timestamp = serverTimeManager.getBoliviaTimestamp()
-                    val loc = capturedLocation
+                    val loc = _capturedLocation.value
 
                     val entity = SaneamientoBaseEntity(
                         clienteId = if (state.esEdicion) state.clienteId else null,
@@ -295,6 +358,32 @@ class SaneamientoViewModel @Inject constructor(
                             )
                             planRuteoDao.insertIfNotExists(listOf(updated))
                         }
+                    } else if (!state.esEdicion) {
+                        val tempLocalClientId = System.currentTimeMillis()
+                        val newAltaClient = PlanRuteoEntity(
+                            clientId = tempLocalClientId,
+                            clientName = state.cliente.trim(),
+                            route = state.route.ifBlank { "SIN_RUTA" },
+                            day = "Lunes",
+                            address = state.direccion.trim().ifEmpty { null },
+                            latitude = loc?.latitude ?: 0.0,
+                            longitude = loc?.longitude ?: 0.0,
+                            status = "Activo",
+                            isVisited = false,
+                            tipoNegocio = state.tipoNegocio.trim(),
+                            zona = state.zona.trim(),
+                            contacto = state.contacto.trim().ifEmpty { null },
+                            telefono = state.telefono.trim().ifEmpty { null },
+                            celular = state.celular.trim().ifEmpty { null },
+                            referencia = state.referencia.trim().ifEmpty { null },
+                            nombreFactura = state.nombreFactura.trim().ifEmpty { null },
+                            nit = state.nit.trim().ifEmpty { null },
+                            hasPendingReview = true,
+                            requiereSaneamiento = false,
+                            saneamientoObligatorio = false
+                        )
+                        planRuteoDao.insertIfNotExists(listOf(newAltaClient))
+                        Log.d(TAG, "Alta persistida localmente en plan_ruteo_local con ID temporal $tempLocalClientId")
                     }
 
                     enqueueSyncWorker()

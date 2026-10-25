@@ -45,12 +45,15 @@ class MainMapViewModel @Inject constructor(
     private val visitaDao: VisitaDao,
     private val visitaApiService: VisitaApiService,
     private val authApiService: AuthApiService,
+    private val authRepository: com.alvarosega.trackingventas.data.repository.AuthRepository,
+    private val moduleConfigManager: com.alvarosega.trackingventas.data.local.ModuleConfigManager,
     private val sessionPreferences: SessionPreferences
 ) : ViewModel() {
 
     val isOperationActive: StateFlow<Boolean> = sessionPreferences.isOperationActive
     val activeRoute: StateFlow<String> = sessionPreferences.activeRoute
     val workdayLimitTime: StateFlow<String?> = sessionPreferences.workdayLimitTime
+    val activeModules: StateFlow<Map<String, Boolean>> = moduleConfigManager.activeModules
 
     private val _latestLocation = MutableStateFlow<LocationPoint?>(null)
     val latestLocation: StateFlow<LocationPoint?> = _latestLocation.asStateFlow()
@@ -86,14 +89,26 @@ class MainMapViewModel @Inject constructor(
     val isRefreshingGps: StateFlow<Boolean> = _isRefreshingGps.asStateFlow()
 
     init {
+        refreshAppModules()
         checkWorkdayStatus()
         syncPlanRuteo()
         forceRefreshGps()
     }
 
+    fun refreshAppModules() {
+        viewModelScope.launch(Dispatchers.IO) {
+            authRepository.syncAppModules()
+        }
+    }
+
+    fun isModuleActive(code: String): Boolean {
+        return moduleConfigManager.isModuleActive(code)
+    }
+
     fun checkWorkdayStatus() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                refreshAppModules()
                 val response = authApiService.getWorkdayStatus()
                 Log.d("WORKDAY_DEBUG", "getWorkdayStatus HTTP Code: ${response.code()}")
                 if (response.isSuccessful && response.body() != null) {
@@ -133,7 +148,6 @@ class MainMapViewModel @Inject constructor(
                     val list = response.body()!!.oportunidades
                     _opportunities.value = list
                     Log.d("OPORTUNIDADES_DEBUG", "Oportunidades cargadas en memoria: ${list.size}")
-                    _statusMessage.value = "Oportunidades cargadas: ${list.size} puntos"
                 } else {
                     val err = response.errorBody()?.string()
                     Log.e("OPORTUNIDADES_DEBUG", "Fallo HTTP ${response.code()}: $err")
@@ -159,13 +173,9 @@ class MainMapViewModel @Inject constructor(
                         longitude = freshLocation.longitude,
                         accuracy = freshLocation.accuracy
                     )
-                    _statusMessage.value = "GPS actualizado (±${freshLocation.accuracy.toInt()}m)"
-
                     withContext(Dispatchers.Main) {
                         onLocationFound?.invoke(freshLocation.latitude, freshLocation.longitude)
                     }
-                } else {
-                    _statusMessage.value = "Esperando señal satelital GPS..."
                 }
             } catch (e: Exception) {
                 _statusMessage.value = "Error GPS: ${e.localizedMessage ?: "No disponible"}"
@@ -198,7 +208,6 @@ class MainMapViewModel @Inject constructor(
 
                     val unsyncedVisitedIds = visitaDao.getUnsyncedVisitedClientIds().toSet()
                     planRuteoDao.refreshPreservingVisited(uniqueEntities, unsyncedVisitedIds)
-                    _statusMessage.value = "Ruteo sincronizado (${uniqueEntities.size} puntos)"
                 } else {
                     val err = response.errorBody()?.string()
                     Log.e("SYNC_DEBUG", "Error respuesta plan-ruteo ${response.code()}: $err")

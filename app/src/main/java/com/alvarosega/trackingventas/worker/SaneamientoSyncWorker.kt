@@ -82,9 +82,9 @@ class SaneamientoSyncWorker @AssistedInject constructor(
                     item.referencia?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("referencia", it) }
                     item.nombreFactura?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("nombre_factura", it) }
                     item.nit?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("nit", it) }
-                    item.latitude?.let { builder.addFormDataPart("latitude", it.toString()) }
-                    item.longitude?.let { builder.addFormDataPart("longitude", it.toString()) }
-                    item.accuracy?.let { builder.addFormDataPart("accuracy", it.toString()) }
+                    item.latitude?.let { builder.addFormDataPart("latitude", String.format(java.util.Locale.US, "%.8f", it)) }
+                    item.longitude?.let { builder.addFormDataPart("longitude", String.format(java.util.Locale.US, "%.8f", it)) }
+                    item.accuracy?.let { builder.addFormDataPart("accuracy", String.format(java.util.Locale.US, "%.2f", it)) }
                     item.createdAt.let { builder.addFormDataPart("created_at", it) }
 
                     // Archivo binario de foto real

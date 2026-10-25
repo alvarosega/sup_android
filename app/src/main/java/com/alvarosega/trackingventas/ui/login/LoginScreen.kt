@@ -162,7 +162,7 @@ fun LoginScreen(
                 ) {
                     if (username.isEmpty()) {
                         Text(
-                            text = "Usuario",
+                            text = "Ruta / Usuario (ej. TDB 6A)",
                             style = TextStyle(
                                 fontSize = 16.sp,
                                 color = IosLabelSecondary,

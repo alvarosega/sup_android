@@ -121,6 +121,9 @@ fun AppNavGraph(
                     } else {
                         navController.navigate("saneamiento_form")
                     }
+                },
+                onNavigateToInventario = { clientId ->
+                    navController.navigate("inventario_screen?clientId=$clientId")
                 }
             )
         }
@@ -148,6 +151,43 @@ fun AppNavGraph(
                 },
                 onSavedSuccessfully = {
                     navController.popBackStack()
+                }
+            )
+        }
+
+        composable(
+            route = "inventario_screen?clientId={clientId}&autoProceedToVisita={autoProceedToVisita}",
+            arguments = listOf(
+                navArgument("clientId") {
+                    type = NavType.StringType
+                    nullable = false
+                    defaultValue = "0"
+                },
+                navArgument("autoProceedToVisita") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                }
+            )
+        ) { backStackEntry ->
+            val rawId = backStackEntry.arguments?.getString("clientId")
+            val autoProceed = backStackEntry.arguments?.getBoolean("autoProceedToVisita") ?: false
+            val clientId = rawId?.toLongOrNull() ?: 0L
+            val inventarioViewModel: com.alvarosega.trackingventas.ui.inventario.InventarioViewModel = hiltViewModel()
+
+            com.alvarosega.trackingventas.ui.inventario.InventarioScreen(
+                viewModel = inventarioViewModel,
+                clientId = clientId,
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onSavedSuccessfully = {
+                    if (autoProceed) {
+                        navController.navigate(Screen.VISITA_REGISTRATION) {
+                            popUpTo(Screen.MAP) { inclusive = false }
+                        }
+                    } else {
+                        navController.popBackStack()
+                    }
                 }
             )
         }

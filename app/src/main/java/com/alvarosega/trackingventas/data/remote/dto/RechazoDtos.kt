@@ -34,25 +34,26 @@ data class PreventaPendienteDto(
     @SerializedName("total_items_preventa") val totalItemsPreventa: Int?,
     @SerializedName("total_items_facturados") val totalItemsFacturados: Int?,
     @SerializedName("total_items_rechazados") val totalItemsRechazados: Int?,
-    @SerializedName("items_rechazados") val itemsRechazados: List<PreventaItemDto> = emptyList(),
-    @SerializedName("items") val items: List<PreventaItemDto> = emptyList()
+    @SerializedName("items_rechazados") val itemsRechazados: List<PreventaItemDto>? = emptyList(),
+    @SerializedName("items") val items: List<PreventaItemDto>? = emptyList()
 )
 
 data class PreventaItemDto(
     @SerializedName("preventa_item_id") val preventaItemId: Long,
     @SerializedName("producto_id") val productoId: Long,
-    @SerializedName("codigo_producto") val codigoProducto: String,
-    @SerializedName("producto_nombre") val productoNombre: String,
+    @SerializedName(value = "codigo_producto", alternate = ["codigo"]) val codigoProducto: String,
+    @SerializedName(value = "producto_nombre", alternate = ["producto"]) val productoNombre: String,
     @SerializedName("categoria") val categoria: String?,
-    @SerializedName("cantidad_preventa") val cantidadPreventa: Int,
+    @SerializedName(value = "cantidad_preventa", alternate = ["cantidad"]) val cantidadPreventa: Int,
     @SerializedName("cantidad_facturada") val cantidadFacturada: Int? = 0,
     @SerializedName("cantidad_rechazada") val cantidadRechazada: Int? = 0,
     @SerializedName("precio_unitario") val precioUnitario: Double,
     @SerializedName("monto_preventa") val montoPreventa: Double?,
-    @SerializedName("monto_facturado") val montoFacturado: Double?,
+    @SerializedName(value = "monto_facturado", alternate = ["monto_final"]) val montoFacturado: Double?,
     @SerializedName("monto_rechazado") val montoRechazado: Double?,
     @SerializedName("es_parcial") val esParcial: Boolean? = false,
-    @SerializedName("es_totalmente_rechazado") val esTotalmenteRechazado: Boolean? = false
+    @SerializedName("es_totalmente_rechazado") val esTotalmenteRechazado: Boolean? = false,
+    @SerializedName("nro_factura") val nroFactura: String? = null
 )
 
 data class RechazoItemPayloadDto(

@@ -12,17 +12,25 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import com.alvarosega.trackingventas.data.local.ModuleConfigManager
 import com.alvarosega.trackingventas.data.local.dao.DeviceEventDao
+import com.alvarosega.trackingventas.data.local.dao.InventarioClienteDao
 import com.alvarosega.trackingventas.data.local.dao.PlanRuteoDao
 import com.alvarosega.trackingventas.data.local.dao.VisitaDao
 import com.alvarosega.trackingventas.data.local.entity.DeviceEventEntity
+import com.alvarosega.trackingventas.data.local.entity.InventarioClienteEntity
 import com.alvarosega.trackingventas.data.local.entity.PlanRuteoEntity
 import com.alvarosega.trackingventas.data.local.entity.VisitaEntity
 import com.alvarosega.trackingventas.data.local.pref.SessionPreferences
 import com.alvarosega.trackingventas.data.location.LocationClient
+import com.alvarosega.trackingventas.data.remote.VisitaApiService
+import com.alvarosega.trackingventas.data.remote.dto.InventarioItemPayloadDto
+import com.alvarosega.trackingventas.data.remote.dto.InventarioProductoHistorialDto
 import com.alvarosega.trackingventas.data.time.ServerTimeManager
 import com.alvarosega.trackingventas.util.ExifMetadataHelper
+import com.alvarosega.trackingventas.worker.InventarioSyncWorker
 import com.alvarosega.trackingventas.worker.VisitaSyncWorker
+import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -33,6 +41,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.UUID
 import javax.inject.Inject
 
 sealed interface ProximityUiState {
@@ -52,7 +61,10 @@ class VisitaViewModel @Inject constructor(
     private val planRuteoDao: PlanRuteoDao,
     private val visitaDao: VisitaDao,
     private val deviceEventDao: DeviceEventDao,
-    private val serverTimeManager: ServerTimeManager
+    private val serverTimeManager: ServerTimeManager,
+    private val apiService: VisitaApiService,
+    private val inventarioClienteDao: InventarioClienteDao,
+    private val moduleConfigManager: ModuleConfigManager
 ) : ViewModel() {
 
     val isOperationActive: StateFlow<Boolean> = sessionPreferences.isOperationActive
@@ -67,16 +79,42 @@ class VisitaViewModel @Inject constructor(
     private val _capturedPhotos = MutableStateFlow<List<File>>(emptyList())
     val capturedPhotos: StateFlow<List<File>> = _capturedPhotos.asStateFlow()
 
+    // ESTADO PARA INVENTARIO EN PDV INTEGRADO EN VISITA
+    private val _productosHistorial = MutableStateFlow<List<InventarioProductoHistorialDto>>(emptyList())
+    val productosHistorial: StateFlow<List<InventarioProductoHistorialDto>> = _productosHistorial.asStateFlow()
+
+    // El mapa almacena la cadena digitada para cada producto por su clave única (Key -> String)
+    private val _stockMap = MutableStateFlow<Map<String, String>>(emptyMap())
+    val stockMap: StateFlow<Map<String, String>> = _stockMap.asStateFlow()
+
+    private val _isLoadingProductos = MutableStateFlow(false)
+    val isLoadingProductos: StateFlow<Boolean> = _isLoadingProductos.asStateFlow()
+
     var activePhotoFile: File? = null
     var capturedLocation: Location? = null
 
     companion object {
-        private const val MAX_PROXIMITY_RADIUS_METERS = 150.0f // Actualizado de 20m a 35m
+        private const val MAX_PROXIMITY_RADIUS_METERS = 150.0f
         private const val TAG = "VISITA_DEBUG"
+    }
+
+    fun isModuleActive(code: String): Boolean {
+        return moduleConfigManager.isModuleActive(code)
+    }
+
+    fun getProdKey(prod: InventarioProductoHistorialDto, idx: Int): String {
+        return if (!prod.codigo.isNullOrBlank()) {
+            prod.codigo!!
+        } else if (prod.productoId != null && prod.productoId!! > 0L) {
+            prod.productoId!!.toString()
+        } else {
+            "PROD_IDX_$idx"
+        }
     }
 
     fun startVisitaForClient(client: PlanRuteoEntity, distanceMeters: Float, lat: Double, lon: Double, accuracy: Float) {
         _capturedPhotos.value = emptyList()
+        _stockMap.value = emptyMap()
         activePhotoFile = null
         val loc = Location("FusedLocation").apply {
             latitude = lat
@@ -86,24 +124,61 @@ class VisitaViewModel @Inject constructor(
         }
         capturedLocation = loc
         _proximityState.value = ProximityUiState.SingleClientMatch(client, distanceMeters)
+
+        if (isModuleActive("inventario_cliente")) {
+            fetchHistorialProductos(client.clientId)
+        }
+    }
+
+    fun fetchHistorialProductos(clienteId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoadingProductos.value = true
+            try {
+                val dias = moduleConfigManager.getIntConfig("inventario_cliente", "dias_historial", 30)
+                val response = apiService.getHistorialProductosCliente(clienteId.toString(), dias)
+                if (response.isSuccessful && response.body()?.success == true) {
+                    val rawList = response.body()!!.productos ?: emptyList()
+                    val sortedList = rawList.sortedWith(
+                        compareByDescending<InventarioProductoHistorialDto> { it.totalComprado ?: 0 }
+                            .thenByDescending { it.historial?.size ?: 0 }
+                            .thenBy { it.producto ?: "" }
+                    )
+                    _productosHistorial.value = sortedList
+                    _stockMap.value = emptyMap() // Por defecto es vacío/sin censar
+                } else {
+                    _productosHistorial.value = emptyList()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error cargando productos de inventario en visita", e)
+                _productosHistorial.value = emptyList()
+            } finally {
+                _isLoadingProductos.value = false
+            }
+        }
+    }
+
+    fun updateStockInput(key: String, inputVal: String) {
+        val filtered = inputVal.filter { it.isDigit() }
+        val currentMap = _stockMap.value.toMutableMap()
+        currentMap[key] = filtered
+        _stockMap.value = currentMap
+    }
+
+    fun adjustStockFisico(key: String, delta: Int) {
+        val currentMap = _stockMap.value.toMutableMap()
+        val currentVal = currentMap[key]?.toIntOrNull() ?: 0
+        val newVal = (currentVal + delta).coerceAtLeast(0)
+        currentMap[key] = "$newVal"
+        _stockMap.value = currentMap
     }
 
     fun resetForm() {
         _capturedPhotos.value = emptyList()
+        _productosHistorial.value = emptyList()
+        _stockMap.value = emptyMap()
         activePhotoFile = null
         capturedLocation = null
         _proximityState.value = ProximityUiState.Idle
-    }
-
-    fun startVisitaOpportunity(lat: Double, lon: Double, accuracy: Float) {
-        val loc = Location("FusedLocation").apply {
-            latitude = lat
-            longitude = lon
-            this.accuracy = accuracy
-            time = serverTimeManager.getSecureCurrentTimeMillis()
-        }
-        capturedLocation = loc
-        _proximityState.value = ProximityUiState.OutOfRange("Registro de nuevo punto comercial (Cliente Oportunidad).")
     }
 
     fun evaluateProximity(currentDay: String) {
@@ -226,7 +301,7 @@ class VisitaViewModel @Inject constructor(
         distanceToClientMeters: Double? = null,
         onSuccess: () -> Unit
     ) {
-        Log.d(TAG, "saveVisita invocado. OpActiva: ${sessionPreferences.isOperationActive.value}, Status: $status, isOpp: $isOpportunity")
+        Log.d(TAG, "saveVisita invocado. Status: $status, isOpp: $isOpportunity")
 
         if (!locationClient.isGpsEnabled()) {
             _errorMessage.value = "El GPS debe estar encendido para guardar la visita."
@@ -264,8 +339,9 @@ class VisitaViewModel @Inject constructor(
                 withContext(Dispatchers.IO) {
                     val visitedAt = serverTimeManager.getBoliviaTimestamp()
 
+                    // 1. Guardar la Visita
                     val visita = VisitaEntity(
-                        uuid = java.util.UUID.randomUUID().toString(),
+                        uuid = UUID.randomUUID().toString(),
                         clientId = if (isOpportunity) null else selectedClient?.clientId,
                         route = currentRoute.ifBlank { "SIN_RUTA" },
                         status = status,
@@ -283,17 +359,51 @@ class VisitaViewModel @Inject constructor(
                     )
 
                     val insertedId = visitaDao.insertVisita(visita)
-                    Log.d(TAG, "Visita guardada en Room local con ID: $insertedId con timestamp ServerTimeManager: $visitedAt")
+                    Log.d(TAG, "Visita guardada en Room local ID: $insertedId")
 
-                    Log.d(TAG, "Guardando visita -> isOpportunity: $isOpportunity, selectedClient: ${selectedClient?.clientId}")
-                    if (!isOpportunity && selectedClient != null) {
-                        planRuteoDao.markClientVisited(selectedClient.clientId)
-                        Log.d(TAG, "Cliente #${selectedClient.clientId} marcado como isVisited = 1")
+                    // 2. Guardar Inventario en PDV si hay productos cargados
+                    val prods = _productosHistorial.value
+                    if (prods.isNotEmpty() && selectedClient != null) {
+                        val itemsPayload = prods.mapIndexed { idx, prod ->
+                            val key = getProdKey(prod, idx)
+                            val valorStock = _stockMap.value[key]?.toIntOrNull() ?: 0
+                            val prodId = if (prod.productoId != null && prod.productoId > 0L) prod.productoId else (idx + 1L)
+                            InventarioItemPayloadDto(
+                                productoId = prodId,
+                                codigoProducto = prod.codigo ?: "",
+                                productoNombre = prod.producto ?: "Producto",
+                                categoria = prod.categoria ?: "General",
+                                stockFisico = valorStock
+                            )
+                        }
+                        val itemsJson = Gson().toJson(itemsPayload)
+
+                        val invEntity = InventarioClienteEntity(
+                            uuid = UUID.randomUUID().toString(),
+                            clienteId = selectedClient.clientId.toString(),
+                            clienteNombre = selectedClient.clientName,
+                            latitude = loc.latitude,
+                            longitude = loc.longitude,
+                            accuracy = loc.accuracy,
+                            isMockLocation = loc.isFromMockProvider,
+                            comments = comments,
+                            itemsJson = itemsJson,
+                            createdAt = visitedAt,
+                            isSynced = false
+                        )
+
+                        val invInsertedId = inventarioClienteDao.insertInventario(invEntity)
+                        Log.d(TAG, "INVENTARIO_INSERT: Registro guardado en inventario_cliente_local con ID: $invInsertedId, UUID: ${invEntity.uuid}, Items: ${prods.size}")
+                        enqueueInventarioSyncWorker()
                     } else {
-                        Log.w(TAG, "No se marcó como visitado en el plan de ruteo local.")
+                        Log.w(TAG, "INVENTARIO_SKIP: No se guardó inventario porque prods.isEmpty() es ${prods.isEmpty()} o selectedClient es null")
                     }
 
-                    enqueueSyncWorker()
+                    if (!isOpportunity && selectedClient != null) {
+                        planRuteoDao.markClientVisited(selectedClient.clientId)
+                    }
+
+                    enqueueVisitaSyncWorker()
                 }
 
                 withContext(Dispatchers.Main) {
@@ -307,21 +417,16 @@ class VisitaViewModel @Inject constructor(
         }
     }
 
-    private fun enqueueSyncWorker() {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
+    private fun enqueueVisitaSyncWorker() {
+        val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
+        val syncWork = OneTimeWorkRequestBuilder<VisitaSyncWorker>().setConstraints(constraints).build()
+        WorkManager.getInstance(context).enqueueUniqueWork("VisitaSyncWorker", ExistingWorkPolicy.REPLACE, syncWork)
+    }
 
-        val syncWork = OneTimeWorkRequestBuilder<VisitaSyncWorker>()
-            .setConstraints(constraints)
-            .build()
-
-        WorkManager.getInstance(context).enqueueUniqueWork(
-            "VisitaSyncWorker",
-            ExistingWorkPolicy.REPLACE,
-            syncWork
-        )
-        Log.d(TAG, "WorkManager: Encolado VisitaSyncWorker")
+    private fun enqueueInventarioSyncWorker() {
+        val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
+        val syncWork = OneTimeWorkRequestBuilder<InventarioSyncWorker>().setConstraints(constraints).build()
+        WorkManager.getInstance(context).enqueueUniqueWork("InventarioSyncWorker", ExistingWorkPolicy.REPLACE, syncWork)
     }
 
     fun clearError() {

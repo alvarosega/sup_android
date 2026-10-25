@@ -46,6 +46,17 @@ fun VisitaCameraPreview(
     var imageCapture: ImageCapture? by remember { mutableStateOf(null) }
     var isCapturing by remember { mutableStateOf(false) }
 
+    DisposableEffect(lifecycleOwner) {
+        onDispose {
+            try {
+                val cameraProvider = ProcessCameraProvider.getInstance(context).get()
+                cameraProvider.unbindAll()
+            } catch (e: Exception) {
+                Log.e("CameraX", "Error liberando cámara en onDispose", e)
+            }
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()

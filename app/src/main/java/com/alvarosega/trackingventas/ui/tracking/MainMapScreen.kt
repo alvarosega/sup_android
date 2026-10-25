@@ -9,7 +9,9 @@ import android.graphics.drawable.Drawable
 import android.location.Location
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.*
 import androidx.compose.animation.animateContentSize
+import com.alvarosega.trackingventas.data.local.entity.getSaneamientoAlertas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -37,6 +39,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -71,9 +74,10 @@ private val IosLabelSecondary = Color(0xFF6E6E73)
 private val IosFillQuaternary = Color(0xFFF2F2F7)
 
 enum class StoreMarkerStatus {
-    VISITED,
+    VISITED_OK,
+    VISITED_SANEAMIENTO,
+    PENDING_SANEAMIENTO,
     PENDING_REVIEW,
-    REQUIRES_CORRECTION,
     DEFAULT
 }
 
@@ -90,6 +94,7 @@ fun MainMapScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
 
     val latestLocation by viewModel.latestLocation.collectAsState()
+    val isOperationActive by viewModel.isOperationActive.collectAsState()
     val allClients by viewModel.allClients.collectAsState()
     val filteredClients by viewModel.filteredClients.collectAsState()
     val selectedFilter by viewModel.selectedFilter.collectAsState()
@@ -105,6 +110,18 @@ fun MainMapScreen(
     var selectedClientIndex by remember { mutableIntStateOf(0) }
     var selectedClientDistance by remember { mutableFloatStateOf(Float.MAX_VALUE) }
     var hasCenteredOnInitialLocation by remember { mutableStateOf(false) }
+    var showLegend by remember { mutableStateOf(true) }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "pulsePencil")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(550, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseAlpha"
+    )
 
     val mapView = remember {
         MapView(context).apply {
@@ -236,11 +253,12 @@ fun MainMapScreen(
                 res[0]
             } else Float.MAX_VALUE
 
-            // Jerarquía: Visitado -> Edición Pendiente -> Requiere Corrección -> Normal
+            // Jerarquía Bicolor de Estados
             val markerStatus = when {
-                client.isVisited -> StoreMarkerStatus.VISITED
                 client.hasPendingReview -> StoreMarkerStatus.PENDING_REVIEW
-                client.requiereCorreccion() -> StoreMarkerStatus.REQUIRES_CORRECTION
+                client.isVisited && client.requiereCorreccion() -> StoreMarkerStatus.VISITED_SANEAMIENTO
+                client.isVisited -> StoreMarkerStatus.VISITED_OK
+                client.requiereCorreccion() -> StoreMarkerStatus.PENDING_SANEAMIENTO
                 else -> StoreMarkerStatus.DEFAULT
             }
 
@@ -256,6 +274,14 @@ fun MainMapScreen(
                 )
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                 setOnMarkerClickListener { _, _ ->
+                    if (!viewModel.isGpsEnabled()) {
+                        Toast.makeText(context, "El GPS está desactivado. Actívalo para interactuar con las visitas.", Toast.LENGTH_SHORT).show()
+                        return@setOnMarkerClickListener true
+                    }
+                    if (!isOperationActive) {
+                        Toast.makeText(context, "Debe iniciar jornada laboral para registrar visitas.", Toast.LENGTH_SHORT).show()
+                        return@setOnMarkerClickListener true
+                    }
                     val nearby = filteredClients.filter { other ->
                         val res = FloatArray(1)
                         Location.distanceBetween(client.latitude, client.longitude, other.latitude, other.longitude, res)
@@ -296,43 +322,100 @@ fun MainMapScreen(
         mapView.invalidate()
     }
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding()
-            .navigationBarsPadding()
+            .background(IosBackground)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-
-            // ÁREA DEL MAPA
-            Box(
+        // BARRA SUPERIOR SÓLIDA CON ELEVACIÓN Y Z-INDEX 10F SOBRE EL MAPA Y STATUS BAR
+        Surface(
+            color = IosCardSurface,
+            shadowElevation = 6.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .zIndex(10f)
+        ) {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
+                    .statusBarsPadding()
             ) {
-                AndroidView(
-                    factory = { mapView },
-                    modifier = Modifier.fillMaxSize()
-                )
-
-                // Alerta GPS Desactivado Banner
-                if (!viewModel.isGpsEnabled()) {
-                    Box(
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp)
+                        .padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .background(IosSystemAmber)
-                            .clickable { context.startActivity(android.content.Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }
-                            .padding(vertical = 8.dp, horizontal = 16.dp),
-                        contentAlignment = Alignment.Center
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { onBack() }
+                            .padding(horizontal = 6.dp, vertical = 6.dp)
                     ) {
-                        Text(
-                            text = "⚠️ GPS Desactivado. Toca aquí para encender la ubicación.",
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Volver",
+                            tint = IosSystemBlue,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Panel", style = TextStyle(fontSize = 16.sp, color = IosSystemBlue, fontWeight = FontWeight.Normal))
+                    }
+
+                    Text(
+                        text = "Mapa de Visitas",
+                        style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = IosLabelPrimary)
+                    )
+
+                    IconButton(
+                        onClick = { viewModel.syncPlanRuteo() },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Sincronizar",
+                            tint = IosSystemBlue,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
+            }
+        }
+
+        // ÁREA DEL MAPA (RESTRINGIDA EN CAPA Z-INDEX 0F)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .zIndex(0f)
+                .navigationBarsPadding()
+        ) {
+            AndroidView(
+                factory = { mapView },
+                modifier = Modifier.fillMaxSize()
+            )
+
+            // Alerta GPS Desactivado Banner
+            if (!viewModel.isGpsEnabled()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(IosSystemAmber)
+                        .clickable { context.startActivity(android.content.Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }
+                        .padding(vertical = 8.dp, horizontal = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "GPS Desactivado. Toca aquí para encender la ubicación.",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
 
                 // Botón Volver
                 Box(
@@ -353,6 +436,111 @@ fun MainMapScreen(
                         tint = IosLabelPrimary,
                         modifier = Modifier.size(20.dp)
                     )
+                }
+
+                // Leyenda de Colores Flotante en Mapa (Top-Left)
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(top = 70.dp, start = 16.dp)
+                ) {
+                    if (showLegend) {
+                        Column(
+                            modifier = Modifier
+                                .width(170.dp)
+                                .shadow(3.dp, RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(IosCardSurface.copy(alpha = 0.95f))
+                                .border(0.8.dp, IosBorderSeparator, RoundedCornerShape(12.dp))
+                                .padding(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "LEYENDA PINES",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = IosLabelSecondary,
+                                    letterSpacing = 0.5.sp
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Ocultar Leyenda",
+                                    tint = IosLabelSecondary,
+                                    modifier = Modifier
+                                        .size(14.dp)
+                                        .clickable { showLegend = false }
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            // Azul: Pendiente OK
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(modifier = Modifier.size(10.dp).background(IosSystemBlue, CircleShape))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Pendiente OK", fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
+                            }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            // Bicolor Azul/Naranja: Pendiente + Falta Saneamiento
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Row(modifier = Modifier.size(10.dp).clip(CircleShape)) {
+                                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemBlue))
+                                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemAmber))
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Pendiente + Saneamiento ⚠️", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
+                            }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            // Verde: Visitado OK
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(modifier = Modifier.size(10.dp).background(IosSystemGreen, CircleShape))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Visitado y Saneado ✓", fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
+                            }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            // Bicolor Verde/Naranja: Visitado + Falta Saneamiento
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Row(modifier = Modifier.size(10.dp).clip(CircleShape)) {
+                                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemGreen))
+                                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemAmber))
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Visitado + Saneamiento ⚠️", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
+                            }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            // Púrpura: En Revisión
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(modifier = Modifier.size(10.dp).background(IosSystemPurple, CircleShape))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("En Revisión", fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
+                            }
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .shadow(2.dp, RoundedCornerShape(20.dp))
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(IosCardSurface)
+                                .border(0.8.dp, IosBorderSeparator, RoundedCornerShape(20.dp))
+                                .clickable { showLegend = true }
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("🎨 Leyenda", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosSystemBlue)
+                        }
+                    }
                 }
 
                 // Botones Superiores Derechos
@@ -439,10 +627,10 @@ fun MainMapScreen(
                             .align(Alignment.BottomCenter)
                             .padding(14.dp)
                             .fillMaxWidth()
-                            .shadow(4.dp, RoundedCornerShape(10.dp))
-                            .clip(RoundedCornerShape(10.dp))
+                            .shadow(6.dp, RoundedCornerShape(18.dp))
+                            .clip(RoundedCornerShape(18.dp))
                             .background(IosCardSurface)
-                            .border(1.dp, IosBorderSeparator, RoundedCornerShape(10.dp))
+                            .border(1.dp, IosBorderSeparator, RoundedCornerShape(18.dp))
                             .padding(16.dp)
                             .animateContentSize()
                     ) {
@@ -524,29 +712,70 @@ fun MainMapScreen(
                             }
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                // Botón Editar Cliente
+                                val isSaneamientoRequerido = necesitaCorreccion || client.requiereSaneamiento || client.saneamientoObligatorio
+                                val buttonBg = if (isSaneamientoRequerido) Color(0xFFFFEBEA).copy(alpha = pulseAlpha) else IosFillQuaternary
+                                val iconTint = if (isSaneamientoRequerido) IosSystemRed else IosSystemBlue
+
+                                // Botón Editar Cliente con Parpadeo Rojo
                                 Box(
                                     modifier = Modifier
-                                        .size(32.dp)
+                                        .size(36.dp)
                                         .clip(CircleShape)
-                                        .background(IosFillQuaternary)
+                                        .background(buttonBg)
+                                        .border(if (isSaneamientoRequerido) 1.5.dp else 0.dp, IosSystemRed.copy(alpha = pulseAlpha), CircleShape)
                                         .clickable { onNavigateToEditarCliente(client) },
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(Icons.Default.Edit, contentDescription = "Editar", tint = IosSystemBlue, modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Default.Edit, contentDescription = "Editar / Saneamiento", tint = iconTint, modifier = Modifier.size(18.dp))
                                 }
 
                                 Spacer(modifier = Modifier.width(8.dp))
 
                                 Box(
                                     modifier = Modifier
-                                        .size(32.dp)
+                                        .size(36.dp)
                                         .clip(CircleShape)
                                         .background(IosFillQuaternary)
                                         .clickable { selectedClient = null },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = IosLabelSecondary, modifier = Modifier.size(16.dp))
+                                }
+                            }
+                        }
+
+                        // Caja de Alertas de Saneamiento si requiere corrección
+                        val isSaneamientoRequerido = necesitaCorreccion || client.requiereSaneamiento || client.saneamientoObligatorio
+                        if (isSaneamientoRequerido) {
+                            val alertas = client.getSaneamientoAlertas()
+                            val alertaTexto = if (alertas.isNotEmpty()) alertas.joinToString(" • ") else "Datos incompletos o pendientes de corrección."
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFFFFF5E5))
+                                    .border(0.8.dp, Color(0xFFFFB74D), RoundedCornerShape(8.dp))
+                                    .padding(10.dp)
+                            ) {
+                                Column {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.Edit, contentDescription = null, tint = IosSystemAmber, modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "SANEAMIENTO OBLIGATORIO ${if (client.calidadScore != null) "(${client.calidadScore}%)" else ""}",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = IosSystemAmber
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = alertaTexto,
+                                        fontSize = 12.sp,
+                                        color = Color(0xFFB25E00),
+                                        fontWeight = FontWeight.Medium
+                                    )
                                 }
                             }
                         }
@@ -744,7 +973,6 @@ fun MainMapScreen(
             }
         }
     }
-}
 
 private object MarkerDrawableCache {
     private var userMarker: Drawable? = null
@@ -798,22 +1026,18 @@ private object MarkerDrawableCache {
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
 
-        // Jerarquía de color exacta
-        val pinColor = when (status) {
-            StoreMarkerStatus.VISITED -> 0xFF007AFF.toInt()            // Azul
-            StoreMarkerStatus.PENDING_REVIEW -> 0xFF5856D6.toInt()     // Púrpura
-            StoreMarkerStatus.REQUIRES_CORRECTION -> 0xFFB25E00.toInt()// Ámbar
-            StoreMarkerStatus.DEFAULT -> {
-                if (inRange) 0xFFFF9500.toInt() else 0xFFFF3B30.toInt() // Naranja en rango / Rojo
-            }
+        val isBicolor = (status == StoreMarkerStatus.PENDING_SANEAMIENTO || status == StoreMarkerStatus.VISITED_SANEAMIENTO)
+
+        val leftColor = when (status) {
+            StoreMarkerStatus.VISITED_OK, StoreMarkerStatus.VISITED_SANEAMIENTO -> 0xFF34C759.toInt() // Verde
+            StoreMarkerStatus.PENDING_REVIEW -> 0xFF5856D6.toInt() // Púrpura
+            else -> 0xFF007AFF.toInt() // Azul
         }
 
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = pinColor
-            style = Paint.Style.FILL
+        val rightColor = when (status) {
+            StoreMarkerStatus.PENDING_SANEAMIENTO, StoreMarkerStatus.VISITED_SANEAMIENTO -> 0xFFFF9500.toInt() // Naranja Saneamiento
+            else -> leftColor
         }
-
-        canvas.drawCircle(width / 2f, 22f, 20f, paint)
 
         val path = android.graphics.Path().apply {
             moveTo(width / 2f - 18f, 24f)
@@ -821,8 +1045,40 @@ private object MarkerDrawableCache {
             lineTo(width / 2f, height.toFloat())
             close()
         }
-        canvas.drawPath(path, paint)
 
+        if (!isBicolor) {
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = leftColor
+                style = Paint.Style.FILL
+            }
+            canvas.drawCircle(width / 2f, 22f, 20f, paint)
+            canvas.drawPath(path, paint)
+        } else {
+            val paintLeft = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = leftColor
+                style = Paint.Style.FILL
+            }
+            val paintRight = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = rightColor
+                style = Paint.Style.FILL
+            }
+
+            // Mitad Izquierda (Estado de Visita)
+            canvas.save()
+            canvas.clipRect(0f, 0f, width / 2f, height.toFloat())
+            canvas.drawCircle(width / 2f, 22f, 20f, paintLeft)
+            canvas.drawPath(path, paintLeft)
+            canvas.restore()
+
+            // Mitad Derecha (Naranja Saneamiento)
+            canvas.save()
+            canvas.clipRect(width / 2f, 0f, width.toFloat(), height.toFloat())
+            canvas.drawCircle(width / 2f, 22f, 20f, paintRight)
+            canvas.drawPath(path, paintRight)
+            canvas.restore()
+        }
+
+        // Círculo Central Blanco
         val centerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = android.graphics.Color.WHITE
             style = Paint.Style.FILL
