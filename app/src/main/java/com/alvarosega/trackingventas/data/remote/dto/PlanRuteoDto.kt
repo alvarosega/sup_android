@@ -26,6 +26,9 @@ data class PlanRuteoDto(
     @SerializedName("nombre_factura") val nombreFactura: String?,
     @SerializedName("nit") val nit: String?,
     @SerializedName("tiene_edicion_pendiente") val tieneEdicionPendiente: Boolean? = null,
+    @SerializedName("has_pending_review") val hasPendingReview: Boolean? = null,
+    @SerializedName("en_revision") val enRevision: Boolean? = null,
+    @SerializedName("pendiente_revision") val pendienteRevision: Boolean? = null,
 
     // Nuevas alertas de saneamiento enviadas desde Laravel
     @SerializedName("requiere_saneamiento") val requiereSaneamiento: Boolean? = false,
@@ -37,6 +40,7 @@ data class PlanRuteoDto(
 
 fun PlanRuteoDto.toEntity(): PlanRuteoEntity {
     val serverIsVisited = this.isVisited == true || this.visitado == true || this.status.equals("VISITADO", ignoreCase = true)
+    val isPendingReview = this.tieneEdicionPendiente == true || this.hasPendingReview == true || this.enRevision == true || this.pendienteRevision == true
     val gson = Gson()
     val alertasJson = if (!this.saneamientoAlertas.isNullOrEmpty()) gson.toJson(this.saneamientoAlertas) else null
     val camposJson = if (!this.saneamientoCamposIncompletos.isNullOrEmpty()) gson.toJson(this.saneamientoCamposIncompletos) else null
@@ -59,7 +63,7 @@ fun PlanRuteoDto.toEntity(): PlanRuteoEntity {
         referencia = this.referencia,
         nombreFactura = this.nombreFactura,
         nit = this.nit,
-        hasPendingReview = this.tieneEdicionPendiente ?: false,
+        hasPendingReview = isPendingReview,
         requiereSaneamiento = (this.requiereSaneamiento == true || this.saneamientoObligatorio == true),
         saneamientoObligatorio = this.saneamientoObligatorio ?: false,
         saneamientoAlertasJson = alertasJson,
