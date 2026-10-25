@@ -43,7 +43,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.alvarosega.trackingventas.data.local.entity.PlanRuteoEntity
-import com.alvarosega.trackingventas.data.local.entity.tieneDatosIncompletos
 import com.alvarosega.trackingventas.ui.camera.VisitaCameraPreview
 import java.io.File
 
@@ -55,6 +54,8 @@ private val IosSystemBlue = Color(0xFF007AFF)
 private val IosSystemGreen = Color(0xFF34C759)
 private val IosSystemGreenLight = Color(0xFFE8F9ED)
 private val IosSystemRed = Color(0xFFFF3B30)
+private val IosSystemAmber = Color(0xFFB25E00)
+private val IosSystemPurple = Color(0xFF5856D6)
 private val IosLabelPrimary = Color(0xFF000000)
 private val IosLabelSecondary = Color(0xFF8E8E93)
 private val IosFillQuaternary = Color(0xFFE5E5EA)
@@ -90,6 +91,13 @@ fun VisitaRegistrationScreen(
     var photoCaptured by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
     var showCameraPreview by remember { mutableStateOf(false) }
+
+    // Evaluación automática de proximidad si la pantalla inicia en estado Idle
+    LaunchedEffect(Unit) {
+        if (viewModel.proximityState.value is ProximityUiState.Idle) {
+            viewModel.evaluateProximity("Lunes")
+        }
+    }
 
     LaunchedEffect(selectedClient?.clientId) {
         selectedStatus = null
@@ -232,11 +240,20 @@ fun VisitaRegistrationScreen(
                                 .padding(24.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "Sin productos en el historial de compras reciente de este cliente.",
-                                style = TextStyle(fontSize = 14.sp, color = IosLabelSecondary),
-                                fontWeight = FontWeight.Medium
-                            )
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "Sin productos en el historial de compras reciente de este cliente.",
+                                    style = TextStyle(fontSize = 14.sp, color = IosLabelSecondary),
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Button(
+                                    onClick = { currentStep = 2 },
+                                    colors = ButtonDefaults.buttonColors(containerColor = IosSystemBlue)
+                                ) {
+                                    Text("Continuar a Registro de Visita ➔", fontWeight = FontWeight.Bold)
+                                }
+                            }
                         }
                     } else {
                         LazyColumn(
@@ -310,7 +327,7 @@ fun VisitaRegistrationScreen(
                                                 Text("-", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = IosLabelPrimary)
                                             }
 
-                                            // Campo Numérico (Vacio por defecto, teclado numerico exclusivo)
+                                            // Campo Numérico
                                             OutlinedTextField(
                                                 value = currentStockStr,
                                                 onValueChange = { input ->
@@ -377,36 +394,36 @@ fun VisitaRegistrationScreen(
                                 Spacer(modifier = Modifier.height(8.dp))
                             }
                         }
-                    }
 
-                    val totalFaltantes = remember(productosHistorial, stockMap) {
-                        productosHistorial.count { p ->
-                            val k = viewModel.getProdKey(p, productosHistorial.indexOf(p))
-                            stockMap[k].isNullOrBlank()
+                        val totalFaltantes = remember(productosHistorial, stockMap) {
+                            productosHistorial.count { p ->
+                                val k = viewModel.getProdKey(p, productosHistorial.indexOf(p))
+                                stockMap[k].isNullOrBlank()
+                            }
                         }
-                    }
-                    val todosCensados = productosHistorial.isNotEmpty() && totalFaltantes == 0
+                        val todosCensados = productosHistorial.isNotEmpty() && totalFaltantes == 0
 
-                    if (!todosCensados && productosHistorial.isNotEmpty()) {
-                        Text(
-                            text = "⚠️ Debe digitar el stock físico de todos los productos para continuar (Faltan $totalFaltantes por censar).",
-                            color = IosSystemRed,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 6.dp)
-                        )
-                    }
+                        if (!todosCensados && productosHistorial.isNotEmpty()) {
+                            Text(
+                                text = "Debe digitar el stock físico de todos los productos para continuar (Faltan $totalFaltantes por censar).",
+                                color = IosSystemRed,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(bottom = 6.dp)
+                            )
+                        }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                    Button(
-                        onClick = { if (todosCensados) currentStep = 2 },
-                        enabled = todosCensados,
-                        modifier = Modifier.fillMaxWidth().height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = IosSystemBlue)
-                    ) {
-                        Text("Continuar a Atención y Fotografía ➔", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.White)
+                        Button(
+                            onClick = { if (todosCensados) currentStep = 2 },
+                            enabled = todosCensados,
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = IosSystemBlue)
+                        ) {
+                            Text("Continuar a Atención y Fotografía ➔", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.White)
+                        }
                     }
                 }
             } else {
@@ -591,7 +608,19 @@ fun VisitaRegistrationScreen(
                             }
                         }
 
-                        else -> {}
+                        else -> {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(IosCardSurface)
+                                    .border(0.8.dp, IosBorderSeparator, RoundedCornerShape(16.dp))
+                                    .padding(20.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(color = IosSystemBlue, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(20.dp))

@@ -155,7 +155,6 @@ fun MainMapScreen(
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
             mapView.onPause()
-            mapView.onDetach()
         }
     }
 
@@ -389,7 +388,7 @@ fun MainMapScreen(
         // BARRA SUPERIOR SÓLIDA CON ELEVACIÓN Y Z-INDEX 10F SOBRE EL MAPA Y STATUS BAR
         Surface(
             color = IosCardSurface,
-            shadowElevation = 6.dp,
+            shadowElevation = 4.dp,
             modifier = Modifier
                 .fillMaxWidth()
                 .zIndex(10f)
@@ -398,11 +397,12 @@ fun MainMapScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
+                    .padding(bottom = 8.dp)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(54.dp)
+                        .height(48.dp)
                         .padding(horizontal = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -439,6 +439,50 @@ fun MainMapScreen(
                             tint = IosSystemBlue,
                             modifier = Modifier.size(20.dp)
                         )
+                    }
+                }
+
+                // Segmented Control de Filtro Integrado en Cabecera
+                val pendingCount = allClients.count { !it.isVisited }
+                val visitedCount = allClients.count { it.isVisited }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp)
+                        .height(34.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(IosFillQuaternary)
+                        .padding(2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    val filters = listOf(
+                        Triple(MapFilterType.TODOS, "Todos", allClients.size),
+                        Triple(MapFilterType.PENDIENTES, "Pendientes", pendingCount),
+                        Triple(MapFilterType.VISITADOS, "Hechos", visitedCount)
+                    )
+
+                    filters.forEach { (type, label, count) ->
+                        val isSelected = selectedFilter == type
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .shadow(if (isSelected) 1.dp else 0.dp, RoundedCornerShape(6.dp))
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (isSelected) IosCardSurface else Color.Transparent)
+                                .clickable { viewModel.setFilter(type) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "$label ($count)",
+                                style = TextStyle(
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) IosLabelPrimary else IosLabelSecondary
+                                )
+                            )
+                        }
                     }
                 }
             }
@@ -864,92 +908,9 @@ fun MainMapScreen(
                         }
                     }
                 }
-                }
-            }
-
-            // BARRA INFERIOR
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(IosCardSurface)
-                    .border(0.5.dp, IosBorderSeparator)
-                    .padding(horizontal = 16.dp, vertical = 10.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "FILTRAR CLIENTES",
-                        style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosLabelSecondary, letterSpacing = 0.5.sp)
-                    )
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (showOpportunities) {
-                            Text(
-                                text = "Oportunidades: ${opportunities.size}",
-                                style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = IosSystemPurple)
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                        }
-
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Sincronizar",
-                            tint = IosSystemBlue,
-                            modifier = Modifier
-                                .size(20.dp)
-                                .clickable { viewModel.syncPlanRuteo() }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                val pendingCount = allClients.count { !it.isVisited }
-                val visitedCount = allClients.count { it.isVisited }
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(36.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(IosFillQuaternary)
-                        .padding(2.dp),
-                    horizontalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    val filters = listOf(
-                        Triple(MapFilterType.TODOS, "Todos", allClients.size),
-                        Triple(MapFilterType.PENDIENTES, "Pendientes", pendingCount),
-                        Triple(MapFilterType.VISITADOS, "Hechos", visitedCount)
-                    )
-
-                    filters.forEach { (type, label, count) ->
-                        val isSelected = selectedFilter == type
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .shadow(if (isSelected) 1.dp else 0.dp, RoundedCornerShape(6.dp))
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(if (isSelected) IosCardSurface else Color.Transparent)
-                                .clickable { viewModel.setFilter(type) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "$label ($count)",
-                                style = TextStyle(
-                                    fontSize = 12.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) IosLabelPrimary else IosLabelSecondary
-                                )
-                            )
-                        }
-                    }
-                }
             }
         }
+    }
 
 private object MarkerDrawableCache {
     private var userMarker: Drawable? = null
