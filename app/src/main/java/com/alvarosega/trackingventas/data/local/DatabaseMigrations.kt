@@ -93,3 +93,9 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
         db.execSQL("ALTER TABLE `plan_ruteo_local` ADD COLUMN `calidadScore` INTEGER DEFAULT NULL")
     }
 }
+
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `inventario_cliente_local` ADD COLUMN `codigoCliente` TEXT DEFAULT NULL")
+    }
+}

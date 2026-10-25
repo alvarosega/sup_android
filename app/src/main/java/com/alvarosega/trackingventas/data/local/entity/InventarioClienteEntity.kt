@@ -9,6 +9,7 @@ data class InventarioClienteEntity(
     val id: Long = 0L,
     val uuid: String,
     val clienteId: String,
+    val codigoCliente: String? = null,
     val clienteNombre: String?,
     val latitude: Double?,
     val longitude: Double?,

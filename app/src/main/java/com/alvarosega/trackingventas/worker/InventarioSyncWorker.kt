@@ -36,10 +36,16 @@ class InventarioSyncWorker @AssistedInject constructor(
 
         for (item in pendientes) {
             try {
+                val clientCode = item.codigoCliente ?: item.clienteId
+                val clientName = item.clienteNombre ?: ""
+
                 val builder = MultipartBody.Builder()
                     .setType(MultipartBody.FORM)
                     .addFormDataPart("uuid", item.uuid)
                     .addFormDataPart("cliente_id", item.clienteId)
+                    .addFormDataPart("codigo_cliente", clientCode)
+                    .addFormDataPart("cliente_nombre", clientName)
+                    .addFormDataPart("cliente", clientName)
 
                 // Deserializar JSON e insertar cada elemento como un arreglo multipart nativo para PHP/Laravel (items[0][...])
                 try {
@@ -58,7 +64,11 @@ class InventarioSyncWorker @AssistedInject constructor(
                     builder.addFormDataPart("items", item.itemsJson)
                 }
 
-                item.comments?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("comments", it) }
+                item.comments?.takeIf { it.isNotBlank() }?.let { obs ->
+                    builder.addFormDataPart("comentarios", obs)
+                    builder.addFormDataPart("comments", obs)
+                    builder.addFormDataPart("observaciones", obs)
+                }
                 item.latitude?.let { builder.addFormDataPart("latitude", String.format(java.util.Locale.US, "%.8f", it)) }
                 item.longitude?.let { builder.addFormDataPart("longitude", String.format(java.util.Locale.US, "%.8f", it)) }
                 item.accuracy?.let { builder.addFormDataPart("accuracy", String.format(java.util.Locale.US, "%.2f", it)) }

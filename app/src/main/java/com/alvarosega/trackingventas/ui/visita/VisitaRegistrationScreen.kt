@@ -395,6 +395,28 @@ fun VisitaRegistrationScreen(
                             }
                         }
 
+                        // Campo de Observaciones específicas del Inventario en PDV
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "OBSERVACIONES DEL INVENTARIO (OPCIONAL)",
+                            style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosLabelSecondary, letterSpacing = 0.5.sp)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        OutlinedTextField(
+                            value = comments,
+                            onValueChange = { comments = it },
+                            placeholder = { Text("Notas sobre el estado del estante, agotados, etc.", fontSize = 13.sp, color = IosLabelSecondary) },
+                            modifier = Modifier.fillMaxWidth(),
+                            maxLines = 2,
+                            shape = RoundedCornerShape(10.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = IosCardSurface,
+                                unfocusedContainerColor = IosCardSurface
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
                         val totalFaltantes = remember(productosHistorial, stockMap) {
                             productosHistorial.count { p ->
                                 val k = viewModel.getProdKey(p, productosHistorial.indexOf(p))
