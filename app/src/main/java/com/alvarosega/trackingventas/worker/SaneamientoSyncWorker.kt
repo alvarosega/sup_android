@@ -39,76 +39,65 @@ class SaneamientoSyncWorker @AssistedInject constructor(
 
         for (item in pendientes) {
             try {
-                val response = if (item.tipoRegistro == "EDICION") {
-                    // EDICIÓN: FormUrlEncoded puro
-                    apiService.storeSaneamientoForm(
-                        tipoRegistro = "EDICION",
-                        route = item.route,
-                        cliente = item.cliente,
-                        tipoNegocio = item.tipoNegocio,
-                        zona = item.zona,
-                        clientId = item.clienteId ?: 0L,
-                        contacto = item.contacto,
-                        telefono = item.telefono,
-                        celular = item.celular ?: "",
-                        direccion = item.direccion,
-                        referencia = item.referencia,
-                        nombreFactura = item.nombreFactura ?: "",
-                        nit = item.nit ?: "0",
-                        createdAt = item.createdAt
-                    )
-                } else {
-                    // ALTA: MultipartBody limpio usando MultipartBody.Builder
-                    val file = item.localPhotoPath?.let { File(it) }
-                    if (file == null || !file.exists()) {
-                        Log.e(TAG, "Alta sin archivo de foto local válido para saneamiento ID: ${item.id}")
-                        tieneErrores = true
-                        continue
-                    }
+                val file = item.localPhotoPath?.let { File(it) }
 
-                    val builder = MultipartBody.Builder()
-                        .setType(MultipartBody.FORM)
-                        .addFormDataPart("tipo_registro", item.tipoRegistro)
-                        .addFormDataPart("route", item.route)
-                        .addFormDataPart("cliente", item.cliente)
-                        .addFormDataPart("tipo_negocio", item.tipoNegocio)
-                        .addFormDataPart("zona", item.zona)
+                // ALTA exige foto de fachada obligatoria
+                if (item.tipoRegistro == "ALTA" && (file == null || !file.exists())) {
+                    Log.e(TAG, "Alta sin archivo de foto local válido para saneamiento ID: ${item.id}")
+                    tieneErrores = true
+                    continue
+                }
 
-                    // Solo adjuntar los campos con contenido real (sin nulls ni binarios de texto)
-                    item.contacto?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("contacto", it) }
-                    item.telefono?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("telefono", it) }
-                    item.celular?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("celular", it) }
-                    item.direccion?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("direccion", it) }
-                    item.referencia?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("referencia", it) }
-                    item.nombreFactura?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("nombre_factura", it) }
-                    item.nit?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("nit", it) }
-                    item.latitude?.let { builder.addFormDataPart("latitude", String.format(java.util.Locale.US, "%.8f", it)) }
-                    item.longitude?.let { builder.addFormDataPart("longitude", String.format(java.util.Locale.US, "%.8f", it)) }
-                    item.accuracy?.let { builder.addFormDataPart("accuracy", String.format(java.util.Locale.US, "%.2f", it)) }
-                    item.createdAt.let { builder.addFormDataPart("created_at", it) }
+                val builder = MultipartBody.Builder()
+                    .setType(MultipartBody.FORM)
+                    .addFormDataPart("tipo_registro", item.tipoRegistro)
+                    .addFormDataPart("route", item.route)
+                    .addFormDataPart("cliente", item.cliente)
+                    .addFormDataPart("tipo_negocio", item.tipoNegocio)
+                    .addFormDataPart("zona", item.zona)
 
-                    // Archivo binario de foto real
+                item.clienteId?.let {
+                    builder.addFormDataPart("cliente_id", it.toString())
+                    builder.addFormDataPart("codigo_cliente", it.toString())
+                }
+
+                // Campos opcionales limpios
+                item.contacto?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("contacto", it) }
+                item.telefono?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("telefono", it) }
+                item.celular?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("celular", it) }
+                item.direccion?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("direccion", it) }
+                item.referencia?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("referencia", it) }
+                item.nombreFactura?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("nombre_factura", it) }
+                item.nit?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("nit", it) }
+                item.latitude?.let { builder.addFormDataPart("latitude", String.format(java.util.Locale.US, "%.8f", it)) }
+                item.longitude?.let { builder.addFormDataPart("longitude", String.format(java.util.Locale.US, "%.8f", it)) }
+                item.accuracy?.let { builder.addFormDataPart("accuracy", String.format(java.util.Locale.US, "%.2f", it)) }
+                item.createdAt.let { builder.addFormDataPart("created_at", it) }
+
+                // Archivo binario de foto opcional o de alta
+                if (file != null && file.exists()) {
                     val photoBody = file.asRequestBody("image/jpeg".toMediaTypeOrNull())
                     builder.addFormDataPart("photo", file.name, photoBody)
-
-                    apiService.storeSaneamientoMultipart(builder.build())
                 }
+
+                val response = apiService.storeSaneamientoMultipart(builder.build())
 
                 if (response.isSuccessful) {
                     saneamientoDao.markAsSynced(item.id)
                     Log.d(TAG, "Saneamiento ID ${item.id} (${item.tipoRegistro}) sincronizado exitosamente (HTTP ${response.code()})")
 
                     item.localPhotoPath?.let { path ->
-                        val file = File(path)
-                        if (file.exists()) file.delete()
+                        val localFile = File(path)
+                        if (localFile.exists()) localFile.delete()
                     }
                 } else {
                     tieneErrores = true
-                    Log.e(TAG, "Error del servidor al sincronizar saneamiento ${item.id}: HTTP ${response.code()}")
+                    val errBody = response.errorBody()?.string()
+                    Log.e(TAG, "Error del servidor al sincronizar saneamiento ID ${item.id} (${item.tipoRegistro}): HTTP ${response.code()} -> $errBody")
                 }
             } catch (e: Exception) {
                 tieneErrores = true
-                Log.e(TAG, "Fallo al enviar saneamiento ${item.id}", e)
+                Log.e(TAG, "Excepción al sincronizar saneamiento ID ${item.id} (${item.tipoRegistro})", e)
             }
         }
 
