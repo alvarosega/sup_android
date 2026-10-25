@@ -580,53 +580,53 @@ fun MainMapScreen(
 
                             Spacer(modifier = Modifier.height(6.dp))
 
-                            // Azul: Pendiente OK
+                            // 1. Azul: no visitado
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(modifier = Modifier.size(10.dp).background(IosSystemBlue, CircleShape))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Pendiente OK", fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
+                                Text("no visitado", fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
                             }
 
                             Spacer(modifier = Modifier.height(4.dp))
 
-                            // Bicolor Azul/Naranja: Pendiente + Falta Saneamiento
+                            // 2. Bicolor Azul/Naranja: no visitado, datos incorrectos
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Row(modifier = Modifier.size(10.dp).clip(CircleShape)) {
                                     Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemBlue))
                                     Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemAmber))
                                 }
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Pendiente + Saneamiento ⚠️", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
+                                Text("no visitado, datos incorrectos", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
                             }
 
                             Spacer(modifier = Modifier.height(4.dp))
 
-                            // Verde: Visitado OK
+                            // 3. Morado: validación de datos
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(modifier = Modifier.size(10.dp).background(IosSystemGreen, CircleShape))
+                                Box(modifier = Modifier.size(10.dp).background(IosSystemPurple, CircleShape))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Visitado y Saneado ✓", fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
+                                Text("validación de datos", fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
                             }
 
                             Spacer(modifier = Modifier.height(4.dp))
 
-                            // Bicolor Verde/Naranja: Visitado + Falta Saneamiento
+                            // 4. Bicolor Verde/Naranja: visitado, datos incorrectos
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Row(modifier = Modifier.size(10.dp).clip(CircleShape)) {
                                     Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemGreen))
                                     Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemAmber))
                                 }
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Visitado + Saneamiento ⚠️", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
+                                Text("visitado, datos incorrectos", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
                             }
 
                             Spacer(modifier = Modifier.height(4.dp))
 
-                            // Púrpura: En Revisión
+                            // 5. Verde: visitado, datos correctos
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(modifier = Modifier.size(10.dp).background(IosSystemPurple, CircleShape))
+                                Box(modifier = Modifier.size(10.dp).background(IosSystemGreen, CircleShape))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("En Revisión", fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
+                                Text("visitado, datos correctos", fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
                             }
                         }
                     } else {
