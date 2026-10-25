@@ -86,15 +86,14 @@ class SaneamientoViewModel @Inject constructor(
         if (clientId != null && clientId > 0L) {
             viewModelScope.launch(Dispatchers.IO) {
                 val clienteOriginal = planRuteoDao.getClientById(clientId)
-                val saneamientoPrevio = saneamientoDao.getLatestByClient(clientId)
                 withContext(Dispatchers.Main) {
                     if (clienteOriginal != null) {
-                        val rawCliente = saneamientoPrevio?.cliente ?: clienteOriginal.clientName
-                        val rawFactura = saneamientoPrevio?.nombreFactura ?: (clienteOriginal.nombreFactura ?: "")
-                        val rawNit = saneamientoPrevio?.nit ?: (clienteOriginal.nit ?: "")
-                        val rawDireccion = saneamientoPrevio?.direccion ?: (clienteOriginal.address ?: "")
-                        val rawTipoNegocio = saneamientoPrevio?.tipoNegocio?.ifBlank { null } ?: clienteOriginal.tipoNegocio?.ifBlank { null } ?: CatalogoTiposNegocio.TIPOS.first()
-                        val rawZona = saneamientoPrevio?.zona?.ifBlank { null } ?: clienteOriginal.zona?.ifBlank { null } ?: CatalogoTiposNegocio.ZONAS.first()
+                        val rawCliente = clienteOriginal.clientName
+                        val rawFactura = clienteOriginal.nombreFactura ?: ""
+                        val rawNit = clienteOriginal.nit ?: ""
+                        val rawDireccion = clienteOriginal.address ?: ""
+                        val rawTipoNegocio = clienteOriginal.tipoNegocio?.ifBlank { null } ?: CatalogoTiposNegocio.TIPOS.first()
+                        val rawZona = clienteOriginal.zona?.ifBlank { null } ?: CatalogoTiposNegocio.ZONAS.first()
 
                         val finalFactura = if (rawFactura.isNotBlank()) rawFactura else rawCliente
                         val finalNit = if (rawNit.isNotBlank()) rawNit else "0"
@@ -106,11 +105,11 @@ class SaneamientoViewModel @Inject constructor(
                             cliente = rawCliente,
                             tipoNegocio = rawTipoNegocio,
                             zona = rawZona,
-                            contacto = saneamientoPrevio?.contacto ?: (clienteOriginal.contacto ?: ""),
-                            telefono = saneamientoPrevio?.telefono ?: (clienteOriginal.telefono ?: ""),
-                            celular = saneamientoPrevio?.celular ?: (clienteOriginal.celular ?: ""),
+                            contacto = clienteOriginal.contacto ?: "",
+                            telefono = clienteOriginal.telefono ?: "",
+                            celular = clienteOriginal.celular ?: "",
                             direccion = rawDireccion,
-                            referencia = saneamientoPrevio?.referencia ?: (clienteOriginal.referencia ?: ""),
+                            referencia = clienteOriginal.referencia ?: "",
                             nombreFactura = finalFactura,
                             nit = finalNit,
                             gpsReady = true
