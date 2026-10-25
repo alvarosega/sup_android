@@ -47,9 +47,9 @@ class RechazoSyncWorker @AssistedInject constructor(
                 item.nroPreventa?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("nro_preventa", it) }
                 item.clienteId.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("cliente_id", it) }
                 item.comentarios?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("comentarios", it) }
-                item.latitude?.let { builder.addFormDataPart("latitude", it.toString()) }
-                item.longitude?.let { builder.addFormDataPart("longitude", it.toString()) }
-                item.accuracy?.let { builder.addFormDataPart("accuracy", it.toString()) }
+                item.latitude?.let { builder.addFormDataPart("latitude", String.format(java.util.Locale.US, "%.8f", it)) }
+                item.longitude?.let { builder.addFormDataPart("longitude", String.format(java.util.Locale.US, "%.8f", it)) }
+                item.accuracy?.let { builder.addFormDataPart("accuracy", String.format(java.util.Locale.US, "%.2f", it)) }
 
                 item.localPhotoPath?.let { path ->
                     val file = File(path)

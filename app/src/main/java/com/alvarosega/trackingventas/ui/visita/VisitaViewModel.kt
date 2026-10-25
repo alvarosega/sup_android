@@ -196,15 +196,15 @@ class VisitaViewModel @Inject constructor(
                 return@launch
             }
 
-            if (currentLocation.isFromMockProvider) {
+            if (com.alvarosega.trackingventas.util.LocationAntiSpoofingHelper.isMockLocation(currentLocation, context)) {
                 deviceEventDao.insertEvent(
                     DeviceEventEntity(
                         eventType = "MOCK_LOCATION_VISITA_BLOCKED",
-                        details = "Intento de visita con ubicación simulada",
+                        details = "Intento de visita con ubicación simulada o aplicación Fake GPS",
                         recordedAt = serverTimeManager.getBoliviaTimestamp()
                     )
                 )
-                _proximityState.value = ProximityUiState.OutOfRange("Ubicación simulada detectada. Acción bloqueada.")
+                _proximityState.value = ProximityUiState.OutOfRange("Ubicación simulada detectada. Acción bloqueada por seguridad.")
                 return@launch
             }
 

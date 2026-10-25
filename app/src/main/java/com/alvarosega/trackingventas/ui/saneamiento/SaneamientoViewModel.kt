@@ -138,15 +138,15 @@ class SaneamientoViewModel @Inject constructor(
                 _errorMessage.value = "No se pudo obtener la señal GPS para el alta."
                 return@launch
             }
-            if (loc.isFromMockProvider) {
+            if (com.alvarosega.trackingventas.util.LocationAntiSpoofingHelper.isMockLocation(loc, context)) {
                 deviceEventDao.insertEvent(
                     DeviceEventEntity(
                         eventType = "MOCK_LOCATION_SANEAMIENTO_BLOCKED",
-                        details = "Intento de alta comercial con GPS simulado",
+                        details = "Intento de alta comercial con GPS simulado o aplicación Fake GPS",
                         recordedAt = serverTimeManager.getBoliviaTimestamp()
                     )
                 )
-                _errorMessage.value = "Ubicación simulada detectada. Acción bloqueada."
+                _errorMessage.value = "Ubicación simulada detectada. Debe usar su ubicación GPS real."
                 return@launch
             }
 

@@ -16,6 +16,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -157,6 +159,28 @@ fun MainMapScreen(
         }
     }
 
+    val clientsSortedByDistance = remember(filteredClients, latestLocation) {
+        val loc = latestLocation
+        if (loc != null) {
+            filteredClients.sortedBy { client ->
+                val res = FloatArray(1)
+                Location.distanceBetween(loc.latitude, loc.longitude, client.latitude, client.longitude, res)
+                res[0]
+            }
+        } else {
+            filteredClients
+        }
+    }
+
+    // Auto-seleccionar el cliente más cercano por defecto para que el carrusel esté SIEMPRE VISIBLE
+    LaunchedEffect(clientsSortedByDistance) {
+        if (selectedClient == null && clientsSortedByDistance.isNotEmpty()) {
+            selectedClient = clientsSortedByDistance.first()
+            selectedClientsGroup = clientsSortedByDistance
+            selectedClientIndex = 0
+        }
+    }
+
     LaunchedEffect(latestLocation, selectedClient) {
         val client = selectedClient
         val loc = latestLocation
@@ -169,12 +193,29 @@ fun MainMapScreen(
         }
     }
 
+    var bestGpsAccuracy by remember { mutableFloatStateOf(Float.MAX_VALUE) }
+
+    LaunchedEffect(filteredClients) {
+        if (!hasCenteredOnInitialLocation && filteredClients.isNotEmpty()) {
+            val validClients = filteredClients.filter { it.latitude != 0.0 && it.longitude != 0.0 }
+            if (validClients.isNotEmpty()) {
+                val avgLat = validClients.map { it.latitude }.average()
+                val avgLon = validClients.map { it.longitude }.average()
+                mapView.controller.setCenter(GeoPoint(avgLat, avgLon))
+                mapView.controller.setZoom(16.0)
+            }
+        }
+    }
+
     LaunchedEffect(latestLocation) {
         latestLocation?.let { loc ->
-            if (!hasCenteredOnInitialLocation) {
-                mapView.controller.setCenter(GeoPoint(loc.latitude, loc.longitude))
-                mapView.controller.setZoom(18.0)
-                hasCenteredOnInitialLocation = true
+            if (loc.latitude != 0.0 && loc.longitude != 0.0) {
+                if (!hasCenteredOnInitialLocation || loc.accuracy < bestGpsAccuracy) {
+                    bestGpsAccuracy = loc.accuracy
+                    mapView.controller.animateTo(GeoPoint(loc.latitude, loc.longitude))
+                    mapView.controller.setZoom(18.0)
+                    hasCenteredOnInitialLocation = true
+                }
             }
         }
     }
@@ -195,11 +236,29 @@ fun MainMapScreen(
     ) {
         mapView.overlays.clear()
 
-        // Receptor de toque en fondo del mapa para deseleccionar cliente al tocar espacio vacío
+        // Receptor de toque en fondo del mapa con amplio área táctil de 60m para tocar pines fácilmente
         val mapTouchOverlay = MapEventsOverlay(object : MapEventsReceiver {
             override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
-                selectedClient = null
-                selectedClientsGroup = emptyList()
+                if (p == null) return false
+                val nearest = filteredClients.minByOrNull { client ->
+                    val res = FloatArray(1)
+                    Location.distanceBetween(p.latitude, p.longitude, client.latitude, client.longitude, res)
+                    res[0]
+                }
+                if (nearest != null) {
+                    val res = FloatArray(1)
+                    Location.distanceBetween(p.latitude, p.longitude, nearest.latitude, nearest.longitude, res)
+                    if (res[0] <= 60.0f) { // Amplia área táctil de 60m alrededor del pin
+                        selectedClient = nearest
+                        val idx = clientsSortedByDistance.indexOf(nearest)
+                        if (idx >= 0) {
+                            selectedClientIndex = idx
+                            selectedClientsGroup = clientsSortedByDistance
+                        }
+                        mapView.controller.animateTo(GeoPoint(nearest.latitude, nearest.longitude))
+                        return true
+                    }
+                }
                 return false
             }
 
@@ -617,275 +676,194 @@ fun MainMapScreen(
                     }
                 }
 
-                // Tarjeta Inset de Cliente Seleccionado
-                selectedClient?.let { client ->
-                    val isInRange = selectedClientDistance <= PROXIMITY_RADIUS_METERS
-                    val necesitaCorreccion = client.requiereCorreccion()
+                // Carrusel Deslizable Horizontal (HorizontalPager 90% Ancho / 10% Siguiente)
+                if (clientsSortedByDistance.isNotEmpty()) {
+                    val pagerState = rememberPagerState(pageCount = { clientsSortedByDistance.size })
 
-                    Column(
+                    // Sincronizar el cliente seleccionado al deslizar en el pager
+                    LaunchedEffect(pagerState.currentPage, clientsSortedByDistance) {
+                        if (clientsSortedByDistance.isNotEmpty() && pagerState.currentPage in clientsSortedByDistance.indices) {
+                            val activeClient = clientsSortedByDistance[pagerState.currentPage]
+                            selectedClient = activeClient
+                        }
+                    }
+
+                    // Sincronizar el pager cuando el usuario toca un pin en el mapa
+                    LaunchedEffect(selectedClient) {
+                        selectedClient?.let { sc ->
+                            val targetIndex = clientsSortedByDistance.indexOf(sc)
+                            if (targetIndex >= 0 && targetIndex != pagerState.currentPage) {
+                                pagerState.animateScrollToPage(targetIndex)
+                            }
+                        }
+                    }
+
+                    HorizontalPager(
+                        state = pagerState,
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        pageSpacing = 12.dp,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .padding(14.dp)
                             .fillMaxWidth()
-                            .shadow(6.dp, RoundedCornerShape(18.dp))
-                            .clip(RoundedCornerShape(18.dp))
-                            .background(IosCardSurface)
-                            .border(1.dp, IosBorderSeparator, RoundedCornerShape(18.dp))
-                            .padding(16.dp)
-                            .animateContentSize()
-                    ) {
-                        // Navegador Carousel si hay múltiples clientes en el mismo punto
-                        if (selectedClientsGroup.size > 1) {
+                            .padding(bottom = 10.dp)
+                    ) { page ->
+                        val client = clientsSortedByDistance[page]
+
+                        val distToClient = if (latestLocation != null) {
+                            val res = FloatArray(1)
+                            Location.distanceBetween(
+                                latestLocation!!.latitude,
+                                latestLocation!!.longitude,
+                                client.latitude,
+                                client.longitude,
+                                res
+                            )
+                            res[0].toDouble()
+                        } else null
+
+                        val isInRange = (distToClient ?: Float.MAX_VALUE.toDouble()) <= PROXIMITY_RADIUS_METERS.toDouble()
+                        val necesitaCorreccion = client.requiereCorreccion()
+
+                        val cardBorderColor = when {
+                            client.isVisited -> IosSystemGreen
+                            client.hasPendingReview -> IosSystemPurple
+                            necesitaCorreccion || client.requiereSaneamiento -> IosSystemAmber
+                            else -> IosSystemBlue
+                        }
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .shadow(6.dp, RoundedCornerShape(18.dp))
+                                .clip(RoundedCornerShape(18.dp))
+                                .background(IosCardSurface)
+                                .border(1.8.dp, cardBorderColor, RoundedCornerShape(18.dp))
+                                .padding(14.dp)
+                                .animateContentSize()
+                        ) {
+                            // Encabezado de Posición en el Carrusel Ordenado por Distancia
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 10.dp),
+                                modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "PUNTOS EN ESTA UBICACIÓN (${selectedClientIndex + 1}/${selectedClientsGroup.size})",
-                                    style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosSystemBlue, letterSpacing = 0.5.sp)
+                                    text = "CLIENTE ${page + 1} DE ${clientsSortedByDistance.size} • ${if (distToClient != null) "A ${distToClient.toInt()}m" else "CALCULANDO"}",
+                                    style = TextStyle(fontSize = 10.sp, fontWeight = FontWeight.Bold, color = cardBorderColor, letterSpacing = 0.5.sp)
                                 )
 
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    IconButton(
-                                        onClick = {
-                                            if (selectedClientIndex > 0) {
-                                                selectedClientIndex--
-                                                selectedClient = selectedClientsGroup[selectedClientIndex]
-                                            }
-                                        },
-                                        enabled = selectedClientIndex > 0,
-                                        modifier = Modifier.size(28.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                            contentDescription = "Anterior",
-                                            tint = if (selectedClientIndex > 0) IosSystemBlue else IosLabelSecondary,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    val isSaneamientoRequerido = necesitaCorreccion || client.requiereSaneamiento || client.saneamientoObligatorio
+                                    val buttonBg = if (isSaneamientoRequerido) Color(0xFFFFEBEA).copy(alpha = pulseAlpha) else IosFillQuaternary
+                                    val iconTint = if (isSaneamientoRequerido) IosSystemRed else IosSystemBlue
 
-                                    IconButton(
-                                        onClick = {
-                                            if (selectedClientIndex < selectedClientsGroup.size - 1) {
-                                                selectedClientIndex++
-                                                selectedClient = selectedClientsGroup[selectedClientIndex]
-                                            }
-                                        },
-                                        enabled = selectedClientIndex < selectedClientsGroup.size - 1,
-                                        modifier = Modifier.size(28.dp)
+                                    // Botón Lápiz de Edición con Parpadeo Rojo
+                                    Box(
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .clip(CircleShape)
+                                            .background(buttonBg)
+                                            .border(if (isSaneamientoRequerido) 1.5.dp else 0.dp, IosSystemRed.copy(alpha = pulseAlpha), CircleShape)
+                                            .clickable { onNavigateToEditarCliente(client) },
+                                        contentAlignment = Alignment.Center
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                            contentDescription = "Siguiente",
-                                            tint = if (selectedClientIndex < selectedClientsGroup.size - 1) IosSystemBlue else IosLabelSecondary,
-                                            modifier = Modifier.size(16.dp)
-                                        )
+                                        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = iconTint, modifier = Modifier.size(16.dp))
                                     }
                                 }
                             }
-                        }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.Top
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            // Nombre del Cliente y Dirección
+                            Column(modifier = Modifier.fillMaxWidth()) {
                                 Text(
                                     text = client.clientName,
                                     style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary)
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "#${client.clientId} • ${client.tipoNegocio ?: "Sin tipo"} • ${client.zona ?: "Sin zona"}",
+                                    text = "#${client.clientId} • ${client.tipoNegocio ?: "General"} • ${client.zona ?: "Sin Zona"}",
                                     style = TextStyle(fontSize = 12.sp, color = IosLabelSecondary)
                                 )
                                 Text(
-                                    text = client.address ?: "Sin dirección",
+                                    text = client.address ?: "Sin dirección registrada",
                                     style = TextStyle(fontSize = 12.sp, color = IosLabelSecondary)
                                 )
                             }
 
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                val isSaneamientoRequerido = necesitaCorreccion || client.requiereSaneamiento || client.saneamientoObligatorio
-                                val buttonBg = if (isSaneamientoRequerido) Color(0xFFFFEBEA).copy(alpha = pulseAlpha) else IosFillQuaternary
-                                val iconTint = if (isSaneamientoRequerido) IosSystemRed else IosSystemBlue
-
-                                // Botón Editar Cliente con Parpadeo Rojo
+                            // Caja de Alerta de Saneamiento si requiere corrección
+                            val isSaneamientoRequerido = necesitaCorreccion || client.requiereSaneamiento || client.saneamientoObligatorio
+                            if (isSaneamientoRequerido) {
+                                val alertas = client.getSaneamientoAlertas()
+                                val alertaTexto = if (alertas.isNotEmpty()) alertas.joinToString(" • ") else "Datos incompletos o pendientes de corrección."
+                                Spacer(modifier = Modifier.height(8.dp))
                                 Box(
                                     modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(buttonBg)
-                                        .border(if (isSaneamientoRequerido) 1.5.dp else 0.dp, IosSystemRed.copy(alpha = pulseAlpha), CircleShape)
-                                        .clickable { onNavigateToEditarCliente(client) },
-                                    contentAlignment = Alignment.Center
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color(0xFFFFF5E5))
+                                        .border(0.8.dp, Color(0xFFFFB74D), RoundedCornerShape(8.dp))
+                                        .padding(8.dp)
                                 ) {
-                                    Icon(Icons.Default.Edit, contentDescription = "Editar / Saneamiento", tint = iconTint, modifier = Modifier.size(18.dp))
-                                }
-
-                                Spacer(modifier = Modifier.width(8.dp))
-
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(IosFillQuaternary)
-                                        .clickable { selectedClient = null },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = IosLabelSecondary, modifier = Modifier.size(16.dp))
-                                }
-                            }
-                        }
-
-                        // Caja de Alertas de Saneamiento si requiere corrección
-                        val isSaneamientoRequerido = necesitaCorreccion || client.requiereSaneamiento || client.saneamientoObligatorio
-                        if (isSaneamientoRequerido) {
-                            val alertas = client.getSaneamientoAlertas()
-                            val alertaTexto = if (alertas.isNotEmpty()) alertas.joinToString(" • ") else "Datos incompletos o pendientes de corrección."
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(Color(0xFFFFF5E5))
-                                    .border(0.8.dp, Color(0xFFFFB74D), RoundedCornerShape(8.dp))
-                                    .padding(10.dp)
-                            ) {
-                                Column {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(Icons.Default.Edit, contentDescription = null, tint = IosSystemAmber, modifier = Modifier.size(14.dp))
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
-                                            text = "SANEAMIENTO OBLIGATORIO ${if (client.calidadScore != null) "(${client.calidadScore}%)" else ""}",
+                                            text = alertaTexto,
                                             fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = IosSystemAmber
+                                            color = Color(0xFFB25E00),
+                                            fontWeight = FontWeight.Medium
                                         )
                                     }
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = alertaTexto,
-                                        fontSize = 12.sp,
-                                        color = Color(0xFFB25E00),
-                                        fontWeight = FontWeight.Medium
-                                    )
                                 }
                             }
-                        }
 
-                        Spacer(modifier = Modifier.height(10.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
 
-                        // Fila de Badges de Estado
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Rango de distancia
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .background(if (isInRange) IosSystemGreen else IosSystemRed, CircleShape)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
+                            // Botón de Acción Principal "Registrar Visita"
+                            Button(
+                                onClick = {
+                                    if (!viewModel.isGpsEnabled()) {
+                                        Toast.makeText(context, "El GPS está apagado. Debe activar la ubicación para registrar una visita.", Toast.LENGTH_LONG).show()
+                                        context.startActivity(android.content.Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                                        return@Button
+                                    }
+                                    val loc = latestLocation
+                                    if (loc == null) {
+                                        Toast.makeText(context, "Esperando señal GPS...", Toast.LENGTH_SHORT).show()
+                                        return@Button
+                                    }
+                                    visitaViewModel.startVisitaForClient(
+                                        client = client,
+                                        distanceMeters = (distToClient ?: Float.MAX_VALUE.toDouble()).toFloat(),
+                                        lat = loc.latitude,
+                                        lon = loc.longitude,
+                                        accuracy = loc.accuracy
+                                    )
+                                    onNavigateToVisita()
+                                },
+                                enabled = isInRange,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = IosSystemGreen,
+                                    disabledContainerColor = IosFillQuaternary
+                                ),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(42.dp)
+                            ) {
                                 Text(
-                                    text = if (selectedClientDistance == Float.MAX_VALUE) "Calculando..."
-                                    else if (isInRange) "${selectedClientDistance.toInt()}m (En rango)"
-                                    else "${selectedClientDistance.toInt()}m (Fuera de rango)",
+                                    text = if (isInRange) "Registrar Visita" else "Acércate a menos de ${PROXIMITY_RADIUS_METERS.toInt()}m",
                                     style = TextStyle(
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = if (isInRange) IosSystemGreen else IosSystemRed
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isInRange) Color.White else IosLabelSecondary
                                     )
                                 )
                             }
-
-                            // Badges funcionales
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                if (client.hasPendingReview) {
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .background(Color(0xFFF3F0FF))
-                                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                                    ) {
-                                        Text("EN REVISIÓN", style = TextStyle(fontSize = 10.sp, fontWeight = FontWeight.Bold, color = IosSystemPurple))
-                                    }
-                                } else if (necesitaCorreccion) {
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .background(Color(0xFFFFF5E5))
-                                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                                    ) {
-                                        Text("DATOS INCOMPLETOS", style = TextStyle(fontSize = 10.sp, fontWeight = FontWeight.Bold, color = IosSystemAmber))
-                                    }
-                                }
-
-                                if (client.isVisited) {
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .background(Color(0xFFEBF9EF))
-                                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                                    ) {
-                                        Text("VISITADO", style = TextStyle(fontSize = 10.sp, fontWeight = FontWeight.Bold, color = IosSystemGreen))
-                                    }
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Button(
-                            onClick = {
-                                if (!viewModel.isGpsEnabled()) {
-                                    Toast.makeText(context, "El GPS está apagado. Debe activar la ubicación para registrar una visita.", Toast.LENGTH_LONG).show()
-                                    context.startActivity(android.content.Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
-                                    return@Button
-                                }
-                                val loc = latestLocation
-                                if (loc == null) {
-                                    Toast.makeText(context, "Esperando señal GPS...", Toast.LENGTH_SHORT).show()
-                                    return@Button
-                                }
-                                visitaViewModel.startVisitaForClient(
-                                    client = client,
-                                    distanceMeters = selectedClientDistance,
-                                    lat = loc.latitude,
-                                    lon = loc.longitude,
-                                    accuracy = loc.accuracy
-                                )
-                                onNavigateToVisita()
-                            },
-                            enabled = isInRange,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = IosSystemGreen,
-                                disabledContainerColor = IosFillQuaternary
-                            ),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(44.dp)
-                        ) {
-                            Text(
-                                text = if (isInRange) "Registrar Visita" else "Acércate a menos de ${PROXIMITY_RADIUS_METERS.toInt()}m",
-                                style = TextStyle(
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isInRange) Color.White else IosLabelSecondary
-                                )
-                            )
                         }
                     }
+                }
                 }
             }
 
@@ -972,7 +950,6 @@ fun MainMapScreen(
                 }
             }
         }
-    }
 
 private object MarkerDrawableCache {
     private var userMarker: Drawable? = null

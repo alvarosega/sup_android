@@ -135,6 +135,7 @@ class DefaultLocationClient(
     }
 
     private fun isLocationFreshAndAccurate(location: Location, maxAgeMs: Long, maxAccuracyMeters: Float): Boolean {
+        if (com.alvarosega.trackingventas.util.LocationAntiSpoofingHelper.isMockLocation(location, context)) return false
         if (location.accuracy > maxAccuracyMeters) return false
         val ageMs = if (location.elapsedRealtimeNanos > 0) {
             (SystemClock.elapsedRealtimeNanos() - location.elapsedRealtimeNanos) / 1_000_000

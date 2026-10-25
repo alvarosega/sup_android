@@ -292,9 +292,9 @@ class PedidosRechazadosViewModel @Inject constructor(
                     RechazoItemPayloadDto(
                         preventaItemId = editable.item.preventaItemId,
                         productoId = editable.item.productoId,
-                        codigoProducto = editable.item.codigoProducto,
-                        productoNombre = editable.item.productoNombre,
-                        categoria = editable.item.categoria,
+                        codigoProducto = editable.item.codigoProducto ?: "",
+                        productoNombre = editable.item.productoNombre ?: "Producto",
+                        categoria = editable.item.categoria ?: "General",
                         cantidadPreventa = editable.item.cantidadPreventa,
                         cantidadRechazada = editable.cantidadRechazada,
                         precioUnitario = editable.item.precioUnitario,
