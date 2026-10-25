@@ -21,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
@@ -53,6 +54,7 @@ private val IosSystemGreen = Color(0xFF34C759)
 private val IosSystemGreenLight = Color(0xFFE8F9ED)
 private val IosSystemRed = Color(0xFFFF3B30)
 private val IosSystemRedLight = Color(0xFFFFEBEA)
+private val IosSystemPurple = Color(0xFF5856D6)
 private val IosLabelPrimary = Color(0xFF000000)
 private val IosLabelSecondary = Color(0xFF8E8E93)
 private val IosFillQuaternary = Color(0xFFF2F2F7)
@@ -62,6 +64,7 @@ fun HomeScreen(
     onNavigateToMap: () -> Unit,
     onLogout: () -> Unit,
     onNavigateToRechazos: () -> Unit = {},
+    onNavigateToAltaCliente: () -> Unit = {},
     viewModel: MainMapViewModel = hiltViewModel(),
     rechazosViewModel: com.alvarosega.trackingventas.ui.rechazos.PedidosRechazadosViewModel = hiltViewModel()
 ) {
@@ -478,6 +481,96 @@ fun HomeScreen(
                     contentDescription = null,
                     tint = IosLabelSecondary,
                     modifier = Modifier.size(if (isVisitasModuleActive && isOperationActive) 20.dp else 18.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            val isSaneamientoModuleActive = viewModel.isModuleActive("saneamiento")
+
+            // Celda Navegable Estilo Apple Inset Grouped: Alta Cliente
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(
+                        elevation = 2.dp,
+                        shape = RoundedCornerShape(16.dp),
+                        ambientColor = Color(0x08000000),
+                        spotColor = Color(0x08000000)
+                    )
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(if (isSaneamientoModuleActive && isOperationActive) IosCardSurface else IosFillQuaternary)
+                    .border(0.8.dp, IosBorderSeparator, RoundedCornerShape(16.dp))
+                    .clickable {
+                        if (!isSaneamientoModuleActive) {
+                            Toast.makeText(context, "Módulo de Alta Cliente deshabilitado para tu ruta por supervisión", Toast.LENGTH_SHORT).show()
+                            return@clickable
+                        }
+                        if (!isOperationActive) {
+                            Toast.makeText(context, "Debe iniciar jornada primero para registrar Altas", Toast.LENGTH_SHORT).show()
+                            return@clickable
+                        }
+                        if (!viewModel.isGpsEnabled()) {
+                            Toast.makeText(context, "El GPS está desactivado. Actívalo para registrar Altas.", Toast.LENGTH_LONG).show()
+                            context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                            return@clickable
+                        }
+                        onNavigateToAltaCliente()
+                    }
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(46.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isSaneamientoModuleActive && isOperationActive) Color(0xFFF3F0FF) else IosFillQuaternary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (isSaneamientoModuleActive) Icons.Default.Add else Icons.Default.Lock,
+                            contentDescription = "Alta Cliente",
+                            tint = if (isSaneamientoModuleActive && isOperationActive) IosSystemPurple else IosLabelSecondary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(14.dp))
+
+                    Column {
+                        Text(
+                            text = "Alta Cliente",
+                            style = TextStyle(
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (isSaneamientoModuleActive && isOperationActive) IosLabelPrimary else IosLabelSecondary
+                            )
+                        )
+                        Text(
+                            text = when {
+                                !isSaneamientoModuleActive -> "Deshabilitado por supervisión"
+                                !isOperationActive -> "Requiere jornada activa"
+                                else -> "Registrar nuevo punto comercial con GPS y foto"
+                            },
+                            style = TextStyle(
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Normal,
+                                color = IosLabelSecondary
+                            )
+                        )
+                    }
+                }
+
+                Icon(
+                    imageVector = if (isSaneamientoModuleActive && isOperationActive) Icons.AutoMirrored.Filled.KeyboardArrowRight else Icons.Default.Lock,
+                    contentDescription = null,
+                    tint = IosLabelSecondary,
+                    modifier = Modifier.size(if (isSaneamientoModuleActive && isOperationActive) 20.dp else 18.dp)
                 )
             }
 

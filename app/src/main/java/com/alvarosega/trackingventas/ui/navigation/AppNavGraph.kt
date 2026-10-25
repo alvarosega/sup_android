@@ -59,6 +59,9 @@ fun AppNavGraph(
                 onNavigateToMap = {
                     navController.navigate(Screen.MAP)
                 },
+                onNavigateToAltaCliente = {
+                    navController.navigate("saneamiento_form")
+                },
                 onNavigateToRechazos = {
                     navController.navigate(Screen.PEDIDOS_RECHAZADOS)
                 },
