@@ -78,9 +78,10 @@ private val IosFillQuaternary = Color(0xFFF2F2F7)
 enum class StoreMarkerStatus {
     VISITED_OK,
     VISITED_SANEAMIENTO,
+    VISITED_REVIEW,
     PENDING_SANEAMIENTO,
     PENDING_REVIEW,
-    DEFAULT
+    PENDING_OK
 }
 
 @Composable
@@ -302,13 +303,14 @@ fun MainMapScreen(
                 res[0]
             } else Float.MAX_VALUE
 
-            // Jerarquía Bicolor de Estados
+            // Jerarquía Bicolor de Estados (2 Dimensiones: Visita x Calidad de Datos)
             val markerStatus = when {
-                client.hasPendingReview -> StoreMarkerStatus.PENDING_REVIEW
+                client.isVisited && client.hasPendingReview -> StoreMarkerStatus.VISITED_REVIEW
                 client.isVisited && client.requiereCorreccion() -> StoreMarkerStatus.VISITED_SANEAMIENTO
                 client.isVisited -> StoreMarkerStatus.VISITED_OK
+                client.hasPendingReview -> StoreMarkerStatus.PENDING_REVIEW
                 client.requiereCorreccion() -> StoreMarkerStatus.PENDING_SANEAMIENTO
-                else -> StoreMarkerStatus.DEFAULT
+                else -> StoreMarkerStatus.PENDING_OK
             }
 
             val marker = Marker(mapView).apply {
@@ -601,11 +603,14 @@ fun MainMapScreen(
 
                             Spacer(modifier = Modifier.height(4.dp))
 
-                            // 3. Morado: validación de datos
+                            // 3. Bicolor Azul/Morado: no visitado, validación de datos
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(modifier = Modifier.size(10.dp).background(IosSystemPurple, CircleShape))
+                                Row(modifier = Modifier.size(10.dp).clip(CircleShape)) {
+                                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemBlue))
+                                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemPurple))
+                                }
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("validación de datos", fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
+                                Text("no visitado, validación de datos", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
                             }
 
                             Spacer(modifier = Modifier.height(4.dp))
@@ -622,7 +627,19 @@ fun MainMapScreen(
 
                             Spacer(modifier = Modifier.height(4.dp))
 
-                            // 5. Verde: visitado, datos correctos
+                            // 5. Bicolor Verde/Morado: visitado, validación de datos
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Row(modifier = Modifier.size(10.dp).clip(CircleShape)) {
+                                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemGreen))
+                                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemPurple))
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("visitado, validación de datos", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
+                            }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            // 6. Verde: visitado, datos correctos
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(modifier = Modifier.size(10.dp).background(IosSystemGreen, CircleShape))
                                 Spacer(modifier = Modifier.width(6.dp))
@@ -971,17 +988,20 @@ private object MarkerDrawableCache {
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
 
-        val isBicolor = (status == StoreMarkerStatus.PENDING_SANEAMIENTO || status == StoreMarkerStatus.VISITED_SANEAMIENTO)
+        val isBicolor = (status == StoreMarkerStatus.PENDING_SANEAMIENTO ||
+                status == StoreMarkerStatus.VISITED_SANEAMIENTO ||
+                status == StoreMarkerStatus.PENDING_REVIEW ||
+                status == StoreMarkerStatus.VISITED_REVIEW)
 
         val leftColor = when (status) {
-            StoreMarkerStatus.VISITED_OK, StoreMarkerStatus.VISITED_SANEAMIENTO -> 0xFF34C759.toInt() // Verde
-            StoreMarkerStatus.PENDING_REVIEW -> 0xFF5856D6.toInt() // Púrpura
-            else -> 0xFF007AFF.toInt() // Azul
+            StoreMarkerStatus.VISITED_OK, StoreMarkerStatus.VISITED_SANEAMIENTO, StoreMarkerStatus.VISITED_REVIEW -> 0xFF34C759.toInt() // Verde (Visitado)
+            else -> 0xFF007AFF.toInt() // Azul (No Visitado)
         }
 
         val rightColor = when (status) {
-            StoreMarkerStatus.PENDING_SANEAMIENTO, StoreMarkerStatus.VISITED_SANEAMIENTO -> 0xFFFF9500.toInt() // Naranja Saneamiento
-            else -> leftColor
+            StoreMarkerStatus.PENDING_SANEAMIENTO, StoreMarkerStatus.VISITED_SANEAMIENTO -> 0xFFFF9500.toInt() // Naranja (Datos Incorrectos)
+            StoreMarkerStatus.PENDING_REVIEW, StoreMarkerStatus.VISITED_REVIEW -> 0xFF5856D6.toInt() // Morado (Validación de Datos)
+            else -> leftColor // Unicolor
         }
 
         val path = android.graphics.Path().apply {
