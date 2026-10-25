@@ -436,15 +436,29 @@ fun MainMapScreen(
                     )
 
                     IconButton(
-                        onClick = { viewModel.syncPlanRuteo() },
+                        onClick = {
+                            viewModel.syncPlanRuteo()
+                            viewModel.refreshAppModules()
+                            viewModel.checkWorkdayStatus()
+                            viewModel.forceRefreshGps()
+                            Toast.makeText(context, "Sincronizando plan de ruta y permisos...", Toast.LENGTH_SHORT).show()
+                        },
                         modifier = Modifier.size(36.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Sincronizar",
-                            tint = IosSystemBlue,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        if (isRefreshingGps) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = IosSystemBlue
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Sincronizar",
+                                tint = IosSystemBlue,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
 
