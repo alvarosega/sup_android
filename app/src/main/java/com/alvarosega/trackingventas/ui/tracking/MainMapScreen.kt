@@ -668,8 +668,14 @@ fun MainMapScreen(
                             .background(IosCardSurface)
                             .border(1.dp, IosBorderSeparator, CircleShape)
                             .clickable {
+                                val currentLoc = latestLocation
+                                if (currentLoc != null) {
+                                    mapView.controller.animateTo(GeoPoint(currentLoc.latitude, currentLoc.longitude))
+                                    mapView.controller.setZoom(18.5)
+                                }
                                 viewModel.forceRefreshGps { lat, lon ->
                                     mapView.controller.animateTo(GeoPoint(lat, lon))
+                                    mapView.controller.setZoom(18.5)
                                 }
                             },
                         contentAlignment = Alignment.Center
@@ -926,13 +932,13 @@ private object MarkerDrawableCache {
     private val storeMarkers = HashMap<String, Drawable>()
 
     fun getUserMarker(context: Context): Drawable {
-        val size = 64
+        val size = 72
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
 
-        // Resplandor externo translúcido
+        // Resplandor externo cian translúcido
         val haloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = 0x44007AFF
+            color = 0x55007AFF
             style = Paint.Style.FILL
         }
         canvas.drawCircle(size / 2f, size / 2f, size / 2f, haloPaint)
@@ -942,14 +948,21 @@ private object MarkerDrawableCache {
             color = android.graphics.Color.WHITE
             style = Paint.Style.FILL
         }
-        canvas.drawCircle(size / 2f, size / 2f, 20f, borderPaint)
+        canvas.drawCircle(size / 2f, size / 2f, 22f, borderPaint)
 
-        // Núcleo azul brillante
+        // Núcleo azul brillante de alta visibilidad
         val corePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = 0xFF007AFF.toInt()
             style = Paint.Style.FILL
         }
-        canvas.drawCircle(size / 2f, size / 2f, 14f, corePaint)
+        canvas.drawCircle(size / 2f, size / 2f, 16f, corePaint)
+
+        // Punto blanco central de referencia
+        val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = android.graphics.Color.WHITE
+            style = Paint.Style.FILL
+        }
+        canvas.drawCircle(size / 2f, size / 2f, 5f, dotPaint)
 
         val drawable = BitmapDrawable(context.resources, bitmap)
         userMarker = drawable

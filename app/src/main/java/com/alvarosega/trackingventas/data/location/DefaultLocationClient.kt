@@ -39,31 +39,26 @@ class DefaultLocationClient(
     override suspend fun getCurrentLocation(): Location? = withContext(Dispatchers.IO) {
         if (!isGpsEnabled()) return@withContext null
 
-        // 1. Intentar obtener la última ubicación conocida SI ES FRESCA (< 15 segundos) y precisa (< 30m)
-        val lastLoc = getFreshLastLocation()
-        if (lastLoc != null) {
-            Log.d(TAG, "Ubicación rápida obtenida de lastLocation: ±${lastLoc.accuracy}m")
-            return@withContext calibrateGpsTime(lastLoc)
-        }
+        // 1. Obtener la última ubicación de FusedLocation como base inmediata (0 ms de respuesta)
+        val lastLoc = getLastKnownLocation()
 
-        // 2. Si no hay ubicación previa fresca, solicitar una fijación GPS activa de alta precisión con timeout
+        // 2. Intentar obtener una fijación activa de alta precisión
         val freshLoc = getActiveGpsLocation()
-        if (freshLoc != null) {
-            Log.d(TAG, "Ubicación fresca obtenida de GPS activo: ±${freshLoc.accuracy}m")
-            return@withContext calibrateGpsTime(freshLoc)
+        val bestLoc = freshLoc ?: lastLoc
+
+        if (bestLoc != null) {
+            Log.d(TAG, "Ubicación obtenida exitosamente: Lat ${bestLoc.latitude}, Lon ${bestLoc.longitude}, ±${bestLoc.accuracy}m")
+            return@withContext calibrateGpsTime(bestLoc)
         }
 
-        // 3. Fallback a la mejor ubicación disponible
-        val fallback = getFallbackLastLocation()
-        Log.d(TAG, "Ubicación fallback: ±${fallback?.accuracy}m")
-        return@withContext fallback?.let { calibrateGpsTime(it) }
+        null
     }
 
     @SuppressLint("MissingPermission")
-    private suspend fun getFreshLastLocation(): Location? = suspendCancellableCoroutine { continuation ->
+    private suspend fun getLastKnownLocation(): Location? = suspendCancellableCoroutine { continuation ->
         client.lastLocation
             .addOnSuccessListener { loc ->
-                if (loc != null && isLocationFreshAndAccurate(loc, maxAgeMs = 15_000L, maxAccuracyMeters = 30.0f)) {
+                if (loc != null && !com.alvarosega.trackingventas.util.LocationAntiSpoofingHelper.isMockLocation(loc, context)) {
                     continuation.resume(loc)
                 } else {
                     continuation.resume(null)
