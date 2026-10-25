@@ -540,32 +540,11 @@ fun MainMapScreen(
                 }
             }
 
-                // Botón Volver
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(top = 16.dp, start = 16.dp)
-                        .size(44.dp)
-                        .shadow(2.dp, CircleShape)
-                        .clip(CircleShape)
-                        .background(IosCardSurface)
-                        .border(1.dp, IosBorderSeparator, CircleShape)
-                        .clickable { onBack() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Volver",
-                        tint = IosLabelPrimary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
                 // Leyenda de Colores Flotante en Mapa (Top-Left)
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .padding(top = 70.dp, start = 16.dp)
+                        .padding(top = 10.dp, start = 12.dp)
                 ) {
                     if (showLegend) {
                         Column(
