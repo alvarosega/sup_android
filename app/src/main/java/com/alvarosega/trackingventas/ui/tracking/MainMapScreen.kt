@@ -283,19 +283,6 @@ fun MainMapScreen(
             mapView.overlays.add(perimeter)
         }
 
-        // Marcador del Vendedor
-        latestLocation?.let { loc ->
-            val userPoint = GeoPoint(loc.latitude, loc.longitude)
-            val userMarker = Marker(mapView).apply {
-                position = userPoint
-                title = null
-                icon = getUserMarkerDrawable(context)
-                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                setOnMarkerClickListener { _, _ -> true }
-            }
-            mapView.overlays.add(userMarker)
-        }
-
         // Marcadores de Clientes con jerarquía de 4 estados
         filteredClients.forEach { client ->
             val clientPoint = GeoPoint(client.latitude, client.longitude)
@@ -358,6 +345,21 @@ fun MainMapScreen(
                 }
             }
             mapView.overlays.add(marker)
+        }
+
+        // Marcador del Vendedor (DIBUJADO AL FINAL PARA ESTAR SIEMPRE EN LA CAPA SUPERIOR)
+        latestLocation?.let { loc ->
+            val userPoint = GeoPoint(loc.latitude, loc.longitude)
+            val userMarker = Marker(mapView).apply {
+                position = userPoint
+                title = null
+                snippet = null
+                infoWindow = null
+                icon = getUserMarkerDrawable(context)
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                setOnMarkerClickListener { _, _ -> true }
+            }
+            mapView.overlays.add(userMarker)
         }
 
         // Oportunidades
@@ -744,8 +746,8 @@ fun MainMapScreen(
 
                     HorizontalPager(
                         state = pagerState,
-                        contentPadding = PaddingValues(horizontal = 20.dp),
-                        pageSpacing = 12.dp,
+                        contentPadding = PaddingValues(start = 10.dp, end = 36.dp),
+                        pageSpacing = 10.dp,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth()
@@ -783,7 +785,6 @@ fun MainMapScreen(
                                 .background(IosCardSurface)
                                 .border(1.8.dp, cardBorderColor, RoundedCornerShape(18.dp))
                                 .padding(14.dp)
-                                .animateContentSize()
                         ) {
                             // Encabezado de Posición en el Carrusel Ordenado por Distancia
                             Row(
@@ -918,37 +919,30 @@ private object MarkerDrawableCache {
     private val storeMarkers = HashMap<String, Drawable>()
 
     fun getUserMarker(context: Context): Drawable {
-        userMarker?.let { return it }
-
-        val resId = context.resources.getIdentifier("ic_marker_user", "drawable", context.packageName)
-        if (resId != 0) {
-            ContextCompat.getDrawable(context, resId)?.let {
-                userMarker = it
-                return it
-            }
-        }
-
-        val size = 56
+        val size = 64
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
 
+        // Resplandor externo translúcido
         val haloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = 0x33007AFF
+            color = 0x44007AFF
             style = Paint.Style.FILL
         }
         canvas.drawCircle(size / 2f, size / 2f, size / 2f, haloPaint)
 
+        // Anillo blanco
         val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = android.graphics.Color.WHITE
             style = Paint.Style.FILL
         }
-        canvas.drawCircle(size / 2f, size / 2f, 16f, borderPaint)
+        canvas.drawCircle(size / 2f, size / 2f, 20f, borderPaint)
 
+        // Núcleo azul brillante
         val corePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = 0xFF007AFF.toInt()
             style = Paint.Style.FILL
         }
-        canvas.drawCircle(size / 2f, size / 2f, 12f, corePaint)
+        canvas.drawCircle(size / 2f, size / 2f, 14f, corePaint)
 
         val drawable = BitmapDrawable(context.resources, bitmap)
         userMarker = drawable
