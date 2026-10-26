@@ -49,40 +49,33 @@ fun PlanRuteoEntity.getSaneamientoAlertas(): List<String> {
 fun PlanRuteoEntity.requiereCorreccion(): Boolean {
     if (requiereSaneamiento || saneamientoObligatorio) return true
 
-    // 1. Cliente: No vacío, sin símbolos extraños (#, $, +, %, etc.)
-    val clienteLimpio = clientName.isNotBlank() &&
-            clientName != "Cliente Sin Nombre" &&
-            !Regex("[#$+%_=<>{}\\[\\]\\^]").containsMatchIn(clientName)
+    // 1. Cliente: No vacío
+    val clienteValido = clientName.isNotBlank() && clientName != "Cliente Sin Nombre"
 
     // 2. Tipo de negocio: Obligatorio
     val tipoNegocioValido = !tipoNegocio.isNullOrBlank()
 
-    // 3. Zona: Obligatoria y distinta de placeholders
-    val zonaValida = !zona.isNullOrBlank() &&
-            !zona.equals("SIN ZONA", ignoreCase = true)
+    // 3. Zona: Obligatoria
+    val zonaValida = !zona.isNullOrBlank() && !zona.equals("SIN ZONA", ignoreCase = true)
 
-    // 4. Celular: Obligatorio, estrictamente numérico, 8 dígitos (o mínimo 7)
-    val celLimpio = celular?.trim() ?: ""
-    val celularValido = celLimpio.isNotBlank() &&
-            celLimpio.all { it.isDigit() } &&
-            celLimpio.length in 7..8
+    // 4. Celular: Obligatorio (mínimo 7 dígitos)
+    val celDigits = celular?.filter { it.isDigit() } ?: ""
+    val celularValido = celDigits.length >= 7
 
-    // 5. Teléfono: Opcional, pero si existe debe ser numérico
-    val telLimpio = telefono?.trim() ?: ""
-    val telefonoValido = telLimpio.isBlank() || (telLimpio.all { it.isDigit() } && telLimpio.length >= 7)
+    // 5. Dirección: Obligatoria (símbolos #, /, ,, -, . son 100% VÁLIDOS)
+    val direccionValida = !address.isNullOrBlank()
 
     // 6. Nombre de Factura: Obligatorio
-    val nombreFacturaValido = !nombreFactura.isNullOrBlank()
+    val nombreFacturaValido = !nombreFactura.isNullOrBlank() || clientName.isNotBlank()
 
-    // 7. NIT: Obligatorio, puramente numérico (admite "0")
-    val nitLimpio = nit?.trim() ?: ""
-    val nitValido = nitLimpio.isNotBlank() && nitLimpio.all { it.isDigit() }
+    // 7. NIT: Obligatorio
+    val nitValido = !nit.isNullOrBlank()
 
-    val datosCompletos = clienteLimpio &&
+    val datosCompletos = clienteValido &&
             tipoNegocioValido &&
             zonaValida &&
             celularValido &&
-            telefonoValido &&
+            direccionValida &&
             nombreFacturaValido &&
             nitValido
 
