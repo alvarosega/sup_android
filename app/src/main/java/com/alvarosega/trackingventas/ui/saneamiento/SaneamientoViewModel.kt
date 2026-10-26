@@ -92,11 +92,8 @@ class SaneamientoViewModel @Inject constructor(
                         val rawFactura = clienteOriginal.nombreFactura ?: ""
                         val rawNit = clienteOriginal.nit ?: ""
                         val rawDireccion = clienteOriginal.address ?: ""
-                        val rawTipoNegocio = clienteOriginal.tipoNegocio?.ifBlank { null } ?: CatalogoTiposNegocio.TIPOS.first()
-                        val rawZona = clienteOriginal.zona?.ifBlank { null } ?: CatalogoTiposNegocio.ZONAS.first()
-
-                        val finalFactura = if (rawFactura.isNotBlank()) rawFactura else rawCliente
-                        val finalNit = if (rawNit.isNotBlank()) rawNit else "0"
+                        val rawTipoNegocio = clienteOriginal.tipoNegocio ?: ""
+                        val rawZona = clienteOriginal.zona ?: ""
 
                         _uiState.value = SaneamientoFormState(
                             clienteId = clienteOriginal.clientId,
@@ -110,8 +107,8 @@ class SaneamientoViewModel @Inject constructor(
                             celular = clienteOriginal.celular ?: "",
                             direccion = rawDireccion,
                             referencia = clienteOriginal.referencia ?: "",
-                            nombreFactura = finalFactura,
-                            nit = finalNit,
+                            nombreFactura = rawFactura,
+                            nit = rawNit,
                             gpsReady = true
                         )
                     } else {
