@@ -47,28 +47,26 @@ fun PlanRuteoEntity.getSaneamientoAlertas(): List<String> {
  * Evalúa si el registro requiere saneamiento/corrección de datos.
  */
 fun PlanRuteoEntity.requiereCorreccion(): Boolean {
-    if (requiereSaneamiento || saneamientoObligatorio) return true
-
     // 1. Cliente: No vacío
     val clienteValido = clientName.isNotBlank() && clientName != "Cliente Sin Nombre"
 
-    // 2. Tipo de negocio: Obligatorio
+    // 2. Tipo de negocio: No vacío
     val tipoNegocioValido = !tipoNegocio.isNullOrBlank()
 
-    // 3. Zona: Obligatoria
-    val zonaValida = !zona.isNullOrBlank() && !zona.equals("SIN ZONA", ignoreCase = true)
+    // 3. Zona: No vacía
+    val zonaValida = !zona.isNullOrBlank()
 
-    // 4. Celular: Obligatorio (mínimo 7 dígitos)
+    // 4. Celular: No vacío (mínimo 7 dígitos)
     val celDigits = celular?.filter { it.isDigit() } ?: ""
     val celularValido = celDigits.length >= 7
 
-    // 5. Dirección: Obligatoria (símbolos #, /, ,, -, . son 100% VÁLIDOS)
+    // 5. Dirección: No vacía (símbolos #, /, ,, -, . son 100% VÁLIDOS)
     val direccionValida = !address.isNullOrBlank()
 
-    // 6. Nombre de Factura: Obligatorio
+    // 6. Nombre de Factura: No vacío (o fallback a cliente)
     val nombreFacturaValido = !nombreFactura.isNullOrBlank() || clientName.isNotBlank()
 
-    // 7. NIT: Obligatorio
+    // 7. NIT: No vacío
     val nitValido = !nit.isNullOrBlank()
 
     val datosCompletos = clienteValido &&
@@ -79,7 +77,11 @@ fun PlanRuteoEntity.requiereCorreccion(): Boolean {
             nombreFacturaValido &&
             nitValido
 
-    return !datosCompletos
+    // Si los datos están físicamente completos, NO requiere corrección (Pin Azul o Verde)
+    if (datosCompletos) return false
+
+    // Si falta alguno de los datos obligatorios, requiere saneamiento (Pin Naranja)
+    return true
 }
 
 // Alias de compatibilidad para pantallas existentes como VisitaRegistrationScreen
