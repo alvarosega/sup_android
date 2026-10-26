@@ -122,12 +122,13 @@ fun SaneamientoFormScreen(
     val isCelularValid = digitsCel.length in 7..8
 
     val direccionWords = formState.direccion.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
-    val isDireccionValid = direccionWords.size >= 3 &&
-            !Regex("[#$+%_=<>{}\\[\\]\\^~|\\\\*;!]").containsMatchIn(formState.direccion)
+    val isDireccionValid = if (formState.esEdicion) {
+        formState.direccion.isNotBlank()
+    } else {
+        direccionWords.size >= 2
+    }
 
-    val nombreFacturaWords = formState.nombreFactura.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
-    val isNombreFacturaValid = nombreFacturaWords.isNotEmpty() &&
-            !Regex("[#$+%_=<>{}\\[\\]\\^~|\\\\*;!]").containsMatchIn(formState.nombreFactura)
+    val isNombreFacturaValid = formState.nombreFactura.isNotBlank() || formState.cliente.isNotBlank()
 
     val digitsNit = formState.nit.filter { it.isDigit() }
     val isNitValid = formState.nit.isNotBlank() && digitsNit.isNotEmpty() && formState.nit.all { it.isDigit() } &&
