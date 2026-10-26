@@ -54,7 +54,10 @@ class SaneamientoSyncWorker @AssistedInject constructor(
                     .addFormDataPart("route", item.route)
                     .addFormDataPart("cliente", item.cliente)
                     .addFormDataPart("tipo_negocio", item.tipoNegocio)
+                    .addFormDataPart("tipo", item.tipoNegocio)
                     .addFormDataPart("zona", item.zona)
+                    .addFormDataPart("zona_comercial", item.zona)
+                    .addFormDataPart("nombre_zona", item.zona)
 
                 item.clienteId?.let {
                     builder.addFormDataPart("cliente_id", it.toString())

@@ -17,14 +17,22 @@ data class PlanRuteoDto(
     // Columnas adicionales para saneamiento y calidad
     @SerializedName("is_visited") val isVisited: Boolean? = null,
     @SerializedName("visitado") val visitado: Boolean? = null,
-    @SerializedName("tipo_negocio") val tipoNegocio: String?,
-    @SerializedName("zona") val zona: String?,
-    @SerializedName("contacto") val contacto: String?,
-    @SerializedName("telefono") val telefono: String?,
-    @SerializedName("celular") val celular: String?,
-    @SerializedName("referencia") val referencia: String?,
-    @SerializedName("nombre_factura") val nombreFactura: String?,
-    @SerializedName("nit") val nit: String?,
+
+    @SerializedName("tipo_negocio") val tipoNegocioRaw: String? = null,
+    @SerializedName("tipo") val tipo: String? = null,
+    @SerializedName("rubro") val rubro: String? = null,
+
+    @SerializedName("zona") val zonaRaw: String? = null,
+    @SerializedName("zona_comercial") val zonaComercial: String? = null,
+    @SerializedName("nombre_zona") val nombreZona: String? = null,
+    @SerializedName("zone") val zone: String? = null,
+
+    @SerializedName("contacto") val contacto: String? = null,
+    @SerializedName("telefono") val telefono: String? = null,
+    @SerializedName("celular") val celular: String? = null,
+    @SerializedName("referencia") val referencia: String? = null,
+    @SerializedName("nombre_factura") val nombreFactura: String? = null,
+    @SerializedName("nit") val nit: String? = null,
     @SerializedName("tiene_edicion_pendiente") val tieneEdicionPendiente: Boolean? = null,
     @SerializedName("has_pending_review") val hasPendingReview: Boolean? = null,
     @SerializedName("en_revision") val enRevision: Boolean? = null,
@@ -45,6 +53,15 @@ fun PlanRuteoDto.toEntity(): PlanRuteoEntity {
     val alertasJson = if (!this.saneamientoAlertas.isNullOrEmpty()) gson.toJson(this.saneamientoAlertas) else null
     val camposJson = if (!this.saneamientoCamposIncompletos.isNullOrEmpty()) gson.toJson(this.saneamientoCamposIncompletos) else null
 
+    val finalZona = this.zonaRaw?.ifBlank { null }
+        ?: this.zonaComercial?.ifBlank { null }
+        ?: this.nombreZona?.ifBlank { null }
+        ?: this.zone?.ifBlank { null }
+
+    val finalTipoNegocio = this.tipoNegocioRaw?.ifBlank { null }
+        ?: this.tipo?.ifBlank { null }
+        ?: this.rubro?.ifBlank { null }
+
     return PlanRuteoEntity(
         clientId = this.clientId,
         clientName = this.clientName ?: "Sin Nombre Comercial",
@@ -55,8 +72,8 @@ fun PlanRuteoDto.toEntity(): PlanRuteoEntity {
         longitude = this.longitude ?: 0.0,
         status = this.status ?: "Activo",
         isVisited = serverIsVisited,
-        tipoNegocio = this.tipoNegocio,
-        zona = this.zona,
+        tipoNegocio = finalTipoNegocio,
+        zona = finalZona,
         contacto = this.contacto,
         telefono = this.telefono,
         celular = this.celular,
