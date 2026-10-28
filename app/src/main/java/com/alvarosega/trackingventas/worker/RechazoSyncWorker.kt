@@ -45,11 +45,37 @@ class RechazoSyncWorker @AssistedInject constructor(
                     .addFormDataPart("motivo", item.motivo)
 
                 item.nroPreventa?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("nro_preventa", it) }
-                item.clienteId.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("cliente_id", it) }
+
+                if (item.clienteId.isNotBlank()) {
+                    builder.addFormDataPart("cliente_id", item.clienteId)
+                    builder.addFormDataPart("codigo_cliente", item.clienteId)
+                }
+
+                item.clienteNombre?.takeIf { it.isNotBlank() }?.let {
+                    builder.addFormDataPart("cliente_nombre", it)
+                    builder.addFormDataPart("cliente", it)
+                }
+
                 item.comentarios?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("comentarios", it) }
-                item.latitude?.let { builder.addFormDataPart("latitude", String.format(java.util.Locale.US, "%.8f", it)) }
-                item.longitude?.let { builder.addFormDataPart("longitude", String.format(java.util.Locale.US, "%.8f", it)) }
-                item.accuracy?.let { builder.addFormDataPart("accuracy", String.format(java.util.Locale.US, "%.2f", it)) }
+
+                item.latitude?.let { lat ->
+                    val latStr = String.format(java.util.Locale.US, "%.8f", lat)
+                    builder.addFormDataPart("latitude", latStr)
+                    builder.addFormDataPart("lat", latStr)
+                }
+
+                item.longitude?.let { lon ->
+                    val lonStr = String.format(java.util.Locale.US, "%.8f", lon)
+                    builder.addFormDataPart("longitude", lonStr)
+                    builder.addFormDataPart("lng", lonStr)
+                }
+
+                item.accuracy?.let { acc ->
+                    builder.addFormDataPart("accuracy", String.format(java.util.Locale.US, "%.2f", acc))
+                }
+
+                builder.addFormDataPart("is_mock", if (item.isMockLocation) "1" else "0")
+                builder.addFormDataPart("is_mock_location", if (item.isMockLocation) "1" else "0")
 
                 item.localPhotoPath?.let { path ->
                     val file = File(path)
