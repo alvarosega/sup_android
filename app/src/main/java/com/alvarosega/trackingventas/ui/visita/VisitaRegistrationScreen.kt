@@ -51,6 +51,7 @@ private val IosBackgroundGrouped = Color(0xFFF2F2F7)
 private val IosCardSurface = Color(0xFFFFFFFF)
 private val IosBorderSeparator = Color(0xFFE5E5EA)
 private val IosSystemBlue = Color(0xFF007AFF)
+private val IosSystemBlueLight = Color(0xFFE8F1FF)
 private val IosSystemGreen = Color(0xFF34C759)
 private val IosSystemGreenLight = Color(0xFFE8F9ED)
 private val IosSystemRed = Color(0xFFFF3B30)
@@ -277,31 +278,61 @@ fun VisitaRegistrationScreen(
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                                        verticalAlignment = Alignment.Top
                                     ) {
                                         Column(
                                             modifier = Modifier
                                                 .weight(1f)
                                                 .clickable { showHistoryDetail = !showHistoryDetail }
                                         ) {
-                                            val historyList = prod.historialCompras ?: emptyList()
-                                            val fechaUltima = prod.ultimaCompra?.fecha?.ifBlank { null }
-                                                ?: historyList.firstOrNull()?.fecha?.ifBlank { null }
-                                                ?: "Sin compra reciente"
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = prod.producto ?: "Producto",
+                                                    style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary)
+                                                )
+                                                val badgeText = prod.jerarquia3 ?: prod.categoria
+                                                if (!badgeText.isNullOrBlank()) {
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .clip(RoundedCornerShape(6.dp))
+                                                            .background(IosSystemBlueLight)
+                                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = badgeText,
+                                                            fontSize = 10.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = IosSystemBlue
+                                                        )
+                                                    }
+                                                }
+                                            }
+
+                                            Spacer(modifier = Modifier.height(4.dp))
+
+                                            // Métrica de 3 Pilares de Auditoría
+                                            val ultCompraStr = if (prod.ultimaCompra?.fecha != null) "${prod.ultimaCompra.cantidad ?: 0} un. (${prod.ultimaCompra.fecha})" else "Sin compras"
+                                            val ultStockStr = if (prod.ultimoStock?.fecha != null) "${prod.ultimoStock.stockFisico} un. (${prod.ultimoStock.fecha})" else "Sin censo previo"
 
                                             Text(
-                                                text = prod.producto ?: "Producto",
-                                                style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary)
+                                                text = "• Teórico disponible: ${prod.stockTeoricoDisponible ?: (prod.totalComprado ?: 0)} un.",
+                                                style = TextStyle(fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
                                             )
-                                            Spacer(modifier = Modifier.height(2.dp))
                                             Text(
-                                                text = "Última compra: $fechaUltima",
-                                                style = TextStyle(fontSize = 12.sp, color = IosLabelSecondary, fontWeight = FontWeight.Medium)
+                                                text = "• Última compra: $ultCompraStr",
+                                                style = TextStyle(fontSize = 11.sp, color = IosLabelSecondary)
                                             )
-                                            if (historyList.isNotEmpty()) {
-                                                Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = "• Último censo físico: $ultStockStr",
+                                                style = TextStyle(fontSize = 11.sp, color = IosLabelSecondary)
+                                            )
+
+                                            val historyCount = (prod.historialCompras?.size ?: 0) + (prod.historicoStocks?.size ?: 0)
+                                            if (historyCount > 0) {
+                                                Spacer(modifier = Modifier.height(3.dp))
                                                 Text(
-                                                    text = if (showHistoryDetail) "▲ Ocultar historial" else "▼ Ver historial (${historyList.size})",
+                                                    text = if (showHistoryDetail) "▲ Ocultar auditoría" else "▼ Ver historial completo ($historyCount)",
                                                     style = TextStyle(fontSize = 11.sp, color = IosSystemBlue, fontWeight = FontWeight.Bold)
                                                 )
                                             }
@@ -359,32 +390,60 @@ fun VisitaRegistrationScreen(
                                         }
                                     }
 
-                                    // Despliegue del Historial de Compras
-                                    val historyList = prod.historialCompras ?: emptyList()
-                                    if (showHistoryDetail && historyList.isNotEmpty()) {
-                                        Spacer(modifier = Modifier.height(8.dp))
+                                    // Despliegue del Historial de Compras y Censos de Stock Físico
+                                    val historyCompras = prod.historialCompras ?: emptyList()
+                                    val historyStocks = prod.historicoStocks ?: emptyList()
+
+                                    if (showHistoryDetail && (historyCompras.isNotEmpty() || historyStocks.isNotEmpty())) {
+                                        Spacer(modifier = Modifier.height(10.dp))
                                         Column(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .clip(RoundedCornerShape(8.dp))
+                                                .clip(RoundedCornerShape(10.dp))
                                                 .background(IosFillQuaternary)
                                                 .padding(10.dp)
                                         ) {
-                                            Text(
-                                                text = "HISTORIAL DE COMPRAS (${historyList.size} TRANSACCIONES)",
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = IosLabelSecondary,
-                                                letterSpacing = 0.5.sp
-                                            )
-                                            Spacer(modifier = Modifier.height(4.dp))
-                                            historyList.forEach { item ->
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.SpaceBetween
-                                                ) {
-                                                    Text("• Fecha: ${item.fecha ?: "-"}", fontSize = 12.sp, color = IosLabelPrimary)
-                                                    Text("Compró: ${item.cantidad ?: 0} un.", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosSystemBlue)
+                                            if (historyCompras.isNotEmpty()) {
+                                                Text(
+                                                    text = "COMPRAS RECIENTES (${historyCompras.size})",
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = IosSystemBlue,
+                                                    letterSpacing = 0.5.sp
+                                                )
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                historyCompras.forEach { item ->
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.SpaceBetween
+                                                    ) {
+                                                        Text("• ${item.fecha ?: "-"}", fontSize = 11.sp, color = IosLabelPrimary)
+                                                        Text("Compró: ${item.cantidad ?: 0} un.", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosSystemBlue)
+                                                    }
+                                                }
+                                            }
+
+                                            if (historyCompras.isNotEmpty() && historyStocks.isNotEmpty()) {
+                                                Spacer(modifier = Modifier.height(6.dp))
+                                            }
+
+                                            if (historyStocks.isNotEmpty()) {
+                                                Text(
+                                                    text = "CENSOS FÍSICOS ANTERIORES (${historyStocks.size})",
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = IosSystemGreen,
+                                                    letterSpacing = 0.5.sp
+                                                )
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                historyStocks.forEach { item ->
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.SpaceBetween
+                                                    ) {
+                                                        Text("• ${item.fecha}", fontSize = 11.sp, color = IosLabelPrimary)
+                                                        Text("Stock: ${item.stockFisico} un.", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosSystemGreen)
+                                                    }
                                                 }
                                             }
                                         }
