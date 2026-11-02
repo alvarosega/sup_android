@@ -14,6 +14,7 @@ import com.alvarosega.trackingventas.data.remote.VisitaApiService
 import com.alvarosega.trackingventas.data.remote.dto.OportunidadDto
 import com.alvarosega.trackingventas.data.remote.dto.PlanRuteoDto
 import com.alvarosega.trackingventas.data.remote.dto.toEntity
+import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -115,13 +116,37 @@ class MainMapViewModel @Inject constructor(
             try {
                 val targetRoute = rutaOpcional ?: sessionPreferences.activeRoute.value.ifBlank { null }
                 val response = visitaApiService.getFronteraRuta(targetRoute)
+                Log.d("FRONTERA_DEBUG", "getFronteraRuta HTTP Code: ${response.code()}")
                 if (response.isSuccessful && response.body() != null) {
-                    val dto = response.body()!!
-                    _routeBoundary.value = dto
-                    Log.d("FRONTERA_DEBUG", "Frontera de ruta cargada con ${dto.puntos.size} puntos")
+                    val rawJson = response.body()!!.string()
+                    Log.d("FRONTERA_DEBUG", "Frontera JSON recibido: $rawJson")
+
+                    val gson = Gson()
+                    val parsedDto = try {
+                        if (rawJson.trim().startsWith("[")) {
+                            val listType = object : com.google.gson.reflect.TypeToken<List<com.alvarosega.trackingventas.data.remote.dto.PuntoDto>>() {}.type
+                            val points: List<com.alvarosega.trackingventas.data.remote.dto.PuntoDto> = gson.fromJson(rawJson, listType) ?: emptyList()
+                            com.alvarosega.trackingventas.data.remote.dto.FronteraRutaDto(puntos = points)
+                        } else {
+                            gson.fromJson(rawJson, com.alvarosega.trackingventas.data.remote.dto.FronteraRutaDto::class.java)
+                        }
+                    } catch (e: Exception) {
+                        Log.e("FRONTERA_DEBUG", "Error parseando JSON de frontera", e)
+                        null
+                    }
+
+                    if (parsedDto != null && parsedDto.puntos.isNotEmpty()) {
+                        _routeBoundary.value = parsedDto
+                        Log.d("FRONTERA_DEBUG", "Frontera procesada exitosamente con ${parsedDto.puntos.size} puntos")
+                    } else {
+                        Log.w("FRONTERA_DEBUG", "Frontera vacía o sin puntos válidos en el JSON")
+                    }
+                } else {
+                    val err = response.errorBody()?.string()
+                    Log.e("FRONTERA_DEBUG", "Error HTTP ${response.code()} consultando frontera de ruta: $err")
                 }
             } catch (e: Exception) {
-                Log.e("FRONTERA_DEBUG", "Error consultando frontera de ruta", e)
+                Log.e("FRONTERA_DEBUG", "Excepcion consultando frontera de ruta", e)
             }
         }
     }

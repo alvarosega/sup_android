@@ -29,7 +29,7 @@ interface VisitaApiService {
     @GET("api/fronteras/ruta")
     suspend fun getFronteraRuta(
         @Query("ruta") rutaOpcional: String? = null
-    ): Response<com.alvarosega.trackingventas.data.remote.dto.FronteraRutaDto>
+    ): Response<ResponseBody>
 
     @GET("api/oportunidades")
     suspend fun getOportunidades(
