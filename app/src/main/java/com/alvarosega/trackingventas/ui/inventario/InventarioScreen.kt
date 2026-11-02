@@ -185,7 +185,7 @@ fun InventarioScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 val fechaUltima = prod.ultimaCompra?.fecha?.ifBlank { null }
-                                    ?: prod.historial?.firstOrNull()?.fecha?.ifBlank { null }
+                                    ?: prod.historialCompras?.firstOrNull()?.fecha?.ifBlank { null }
                                     ?: "Sin compra reciente"
 
                                 Text(

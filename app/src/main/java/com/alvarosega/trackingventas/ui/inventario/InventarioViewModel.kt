@@ -18,6 +18,7 @@ import com.alvarosega.trackingventas.data.location.LocationClient
 import com.alvarosega.trackingventas.data.remote.VisitaApiService
 import com.alvarosega.trackingventas.data.remote.dto.InventarioItemPayloadDto
 import com.alvarosega.trackingventas.data.remote.dto.InventarioProductoHistorialDto
+import com.alvarosega.trackingventas.data.remote.dto.ProductoInventarioDto
 import com.alvarosega.trackingventas.data.time.ServerTimeManager
 import com.alvarosega.trackingventas.worker.InventarioSyncWorker
 import com.google.gson.Gson
@@ -99,8 +100,8 @@ class InventarioViewModel @Inject constructor(
                 if (response.isSuccessful && response.body()?.success == true) {
                     val rawList = response.body()!!.productos ?: emptyList()
                     val sortedList = rawList.sortedWith(
-                        compareByDescending<InventarioProductoHistorialDto> {
-                            (it.historial?.size ?: 0).coerceAtLeast(it.frecuenciaCompra ?: 0)
+                        compareByDescending<ProductoInventarioDto> {
+                            (it.historialCompras?.size ?: 0).coerceAtLeast(it.frecuenciaCompra ?: 0)
                         }
                         .thenByDescending {
                             it.montoHistorico ?: (it.totalComprado ?: 0).toDouble()

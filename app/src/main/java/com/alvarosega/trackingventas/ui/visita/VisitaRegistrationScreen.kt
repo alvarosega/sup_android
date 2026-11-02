@@ -284,8 +284,9 @@ fun VisitaRegistrationScreen(
                                                 .weight(1f)
                                                 .clickable { showHistoryDetail = !showHistoryDetail }
                                         ) {
+                                            val historyList = prod.historialCompras ?: emptyList()
                                             val fechaUltima = prod.ultimaCompra?.fecha?.ifBlank { null }
-                                                ?: prod.historial?.firstOrNull()?.fecha?.ifBlank { null }
+                                                ?: historyList.firstOrNull()?.fecha?.ifBlank { null }
                                                 ?: "Sin compra reciente"
 
                                             Text(
@@ -297,11 +298,10 @@ fun VisitaRegistrationScreen(
                                                 text = "Última compra: $fechaUltima",
                                                 style = TextStyle(fontSize = 12.sp, color = IosLabelSecondary, fontWeight = FontWeight.Medium)
                                             )
-                                            val historyCount = prod.historial?.size ?: 0
-                                            if (historyCount > 0) {
+                                            if (historyList.isNotEmpty()) {
                                                 Spacer(modifier = Modifier.height(2.dp))
                                                 Text(
-                                                    text = if (showHistoryDetail) "▲ Ocultar historial" else "▼ Ver historial ($historyCount)",
+                                                    text = if (showHistoryDetail) "▲ Ocultar historial" else "▼ Ver historial (${historyList.size})",
                                                     style = TextStyle(fontSize = 11.sp, color = IosSystemBlue, fontWeight = FontWeight.Bold)
                                                 )
                                             }
@@ -360,7 +360,8 @@ fun VisitaRegistrationScreen(
                                     }
 
                                     // Despliegue del Historial de Compras
-                                    if (showHistoryDetail && !prod.historial.isNullOrEmpty()) {
+                                    val historyList = prod.historialCompras ?: emptyList()
+                                    if (showHistoryDetail && historyList.isNotEmpty()) {
                                         Spacer(modifier = Modifier.height(8.dp))
                                         Column(
                                             modifier = Modifier
@@ -370,14 +371,14 @@ fun VisitaRegistrationScreen(
                                                 .padding(10.dp)
                                         ) {
                                             Text(
-                                                text = "HISTORIAL DE COMPRAS (${prod.historial.size} TRANSACCIONES)",
+                                                text = "HISTORIAL DE COMPRAS (${historyList.size} TRANSACCIONES)",
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = IosLabelSecondary,
                                                 letterSpacing = 0.5.sp
                                             )
                                             Spacer(modifier = Modifier.height(4.dp))
-                                            prod.historial.forEach { item ->
+                                            historyList.forEach { item ->
                                                 Row(
                                                     modifier = Modifier.fillMaxWidth(),
                                                     horizontalArrangement = Arrangement.SpaceBetween
