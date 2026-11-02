@@ -84,6 +84,13 @@ class MainMapViewModel @Inject constructor(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private val _showUnvisited = MutableStateFlow(true)
+    val showUnvisited: StateFlow<Boolean> = _showUnvisited.asStateFlow()
+
+    fun toggleShowUnvisited() {
+        _showUnvisited.value = !_showUnvisited.value
+    }
+
     // --- ESTADO EN MEMORIA PARA OPORTUNIDADES (SOLO LECTURA) ---
     private val _showOpportunities = MutableStateFlow(false)
     val showOpportunities: StateFlow<Boolean> = _showOpportunities.asStateFlow()

@@ -99,10 +99,10 @@ fun MainMapScreen(
 
     val latestLocation by viewModel.latestLocation.collectAsState()
     val mapMode by viewModel.mapMode.collectAsState()
+    val showUnvisited by viewModel.showUnvisited.collectAsState()
     val activeDay by viewModel.activeDay.collectAsState()
     val isOperationActive by viewModel.isOperationActive.collectAsState()
     val allClients by viewModel.allClients.collectAsState()
-    val filteredClients by viewModel.filteredClients.collectAsState()
     val selectedFilter by viewModel.selectedFilter.collectAsState()
     val statusMsg by viewModel.statusMessage.collectAsState()
     val isRefreshingGps by viewModel.isRefreshingGps.collectAsState()
@@ -110,6 +110,26 @@ fun MainMapScreen(
     val showOpportunities by viewModel.showOpportunities.collectAsState()
     val opportunities by viewModel.opportunities.collectAsState()
     val isLoadingOpportunities by viewModel.isLoadingOpportunities.collectAsState()
+
+    val baseClientsForMap = remember(allClients, mapMode, showUnvisited) {
+        if (mapMode == MapMode.VISITAS) {
+            if (showUnvisited) {
+                allClients
+            } else {
+                allClients.filter { !it.status.equals("unvisited", ignoreCase = true) }
+            }
+        } else {
+            allClients
+        }
+    }
+
+    val filteredClients = remember(baseClientsForMap, selectedFilter) {
+        when (selectedFilter) {
+            MapFilterType.TODOS -> baseClientsForMap
+            MapFilterType.PENDIENTES -> baseClientsForMap.filter { !it.isVisited }
+            MapFilterType.VISITADOS -> baseClientsForMap.filter { it.isVisited }
+        }
+    }
 
     var selectedClient by remember { mutableStateOf<PlanRuteoEntity?>(null) }
     var selectedClientsGroup by remember { mutableStateOf<List<PlanRuteoEntity>>(emptyList()) }
@@ -540,8 +560,16 @@ fun MainMapScreen(
                 }
 
                 // Segmented Control de Filtro Integrado en Cabecera
-                val pendingCount = allClients.count { !it.isVisited }
-                val visitedCount = allClients.count { it.isVisited }
+                val isVisitasMode = mapMode == MapMode.VISITAS
+                val baseClientsForCounts = if (isVisitasMode) {
+                    allClients.filter { !it.status.equals("unvisited", ignoreCase = true) }
+                } else {
+                    allClients
+                }
+
+                val totalCount = baseClientsForCounts.size
+                val pendingCount = baseClientsForCounts.count { !it.isVisited }
+                val visitedCount = baseClientsForCounts.count { it.isVisited }
 
                 Row(
                     modifier = Modifier
@@ -554,7 +582,7 @@ fun MainMapScreen(
                     horizontalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     val filters = listOf(
-                        Triple(MapFilterType.TODOS, "Todos", allClients.size),
+                        Triple(MapFilterType.TODOS, "Todos", totalCount),
                         Triple(MapFilterType.PENDIENTES, "Pendientes", pendingCount),
                         Triple(MapFilterType.VISITADOS, "Hechos", visitedCount)
                     )
@@ -804,27 +832,23 @@ fun MainMapScreen(
                         }
                     }
 
-                    // Toggle Oportunidades
+                    // Toggle Clientes Referenciales (Unvisited)
                     Box(
                         modifier = Modifier
                             .size(44.dp)
                             .shadow(2.dp, CircleShape)
                             .clip(CircleShape)
-                            .background(if (showOpportunities) IosSystemPurple else IosCardSurface)
-                            .border(1.dp, if (showOpportunities) IosSystemPurple else IosBorderSeparator, CircleShape)
-                            .clickable { viewModel.toggleOpportunities() },
+                            .background(if (showUnvisited) IosSystemPurple else IosCardSurface)
+                            .border(1.dp, if (showUnvisited) IosSystemPurple else IosBorderSeparator, CircleShape)
+                            .clickable { viewModel.toggleShowUnvisited() },
                         contentAlignment = Alignment.Center
                     ) {
-                        if (isLoadingOpportunities) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = "Oportunidades",
-                                tint = if (showOpportunities) Color.White else IosSystemPurple,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.Place,
+                            contentDescription = "Ver / Ocultar Referenciales",
+                            tint = if (showUnvisited) Color.White else IosLabelSecondary,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
 
