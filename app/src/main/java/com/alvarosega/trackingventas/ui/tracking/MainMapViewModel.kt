@@ -204,28 +204,32 @@ class MainMapViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             Log.d("SYNC_DEBUG", "Iniciando syncPlanRuteo()...")
             try {
-                val response = visitaApiService.getPlanRuteo()
-                Log.d("SYNC_DEBUG", "getPlanRuteo HTTP: ${response.code()}")
-                if (response.isSuccessful && response.body() != null) {
-                    val dtos = response.body()!!
-                    Log.d("SYNC_DEBUG", "Clientes recibidos del servidor: ${dtos.size}")
-                    dtos.forEachIndexed { index, dto ->
-                        Log.d("SYNC_DEBUG", "DTO[$index]: clientId=${dto.clientId}, name=${dto.clientName}, lat=${dto.latitude}, lon=${dto.longitude}")
-                    }
+                // 1. Intentar consultar endpoint especializado api/visitas/clientes
+                val responseVisitas = try { visitaApiService.getVisitasClientes() } catch (e: Exception) { null }
+                val dtos = if (responseVisitas?.isSuccessful == true && !responseVisitas.body().isNullOrEmpty()) {
+                    Log.d("SYNC_DEBUG", "Descargado vía api/visitas/clientes: ${responseVisitas.body()!!.size} clientes")
+                    responseVisitas.body()!!
+                } else {
+                    val responsePlan = visitaApiService.getPlanRuteo()
+                    Log.d("SYNC_DEBUG", "Descargado vía api/plan-ruteo HTTP: ${responsePlan.code()}")
+                    if (responsePlan.isSuccessful && responsePlan.body() != null) {
+                        responsePlan.body()!!
+                    } else emptyList()
+                }
 
+                if (dtos.isNotEmpty()) {
+                    Log.d("SYNC_DEBUG", "Clientes totales procesados del servidor: ${dtos.size}")
                     val entities = dtos.map { it.toEntity() }
                     val uniqueEntities = entities.distinctBy { it.clientId }
-                    Log.d("SYNC_DEBUG", "Entidades únicas por clientId: ${uniqueEntities.size} de ${entities.size}")
 
                     val unsyncedVisitedIds = visitaDao.getUnsyncedVisitedClientIds().toSet()
                     planRuteoDao.refreshPreservingVisited(uniqueEntities, unsyncedVisitedIds)
+                    Log.d("SYNC_DEBUG", "Plan ruteo guardado en Room: ${uniqueEntities.size} clientes")
                 } else {
-                    val err = response.errorBody()?.string()
-                    Log.e("SYNC_DEBUG", "Error respuesta plan-ruteo ${response.code()}: $err")
-                    _statusMessage.value = "Error al descargar ruteo: ${response.code()}"
+                    _statusMessage.value = "Sin ruteo descargado del servidor"
                 }
             } catch (e: Exception) {
-                Log.e("SYNC_DEBUG", "Excepcion durante syncPlanRuteo", e)
+                Log.e("SYNC_DEBUG", "Excepción durante syncPlanRuteo", e)
                 _statusMessage.value = "Fallo de red al sincronizar ruteo"
             }
         }
