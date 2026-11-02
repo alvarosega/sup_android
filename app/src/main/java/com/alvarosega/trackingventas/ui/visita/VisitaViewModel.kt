@@ -70,6 +70,7 @@ class VisitaViewModel @Inject constructor(
 
     val isOperationActive: StateFlow<Boolean> = sessionPreferences.isOperationActive
     val activeRoute: StateFlow<String> = sessionPreferences.activeRoute
+    val activeModules: StateFlow<Map<String, Boolean>> = moduleConfigManager.activeModules
 
     private val _proximityState = MutableStateFlow<ProximityUiState>(ProximityUiState.Idle)
     val proximityState: StateFlow<ProximityUiState> = _proximityState.asStateFlow()
@@ -248,6 +249,15 @@ class VisitaViewModel @Inject constructor(
         val file = File(dir, "VISITA_${secureNow}_$count.jpg")
         activePhotoFile = file
         return file
+    }
+
+    fun onPhotoTakenSuccessfully() {
+        val file = activePhotoFile
+        if (file != null && file.exists() && file.length() > 0) {
+            if (!_capturedPhotos.value.contains(file)) {
+                _capturedPhotos.value = _capturedPhotos.value + file
+            }
+        }
     }
 
     fun getOrCreatePrivatePhotoFile(): File {
