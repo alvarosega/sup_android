@@ -47,7 +47,12 @@ data class PlanRuteoDto(
 )
 
 fun PlanRuteoDto.toEntity(): PlanRuteoEntity {
-    val serverIsVisited = this.isVisited == true || this.visitado == true || this.status.equals("VISITADO", ignoreCase = true)
+    val serverStatus = this.status?.trim()?.lowercase() ?: "unvisited"
+    val serverIsVisited = this.isVisited == true ||
+            this.visitado == true ||
+            this.status.equals("VISITADO", ignoreCase = true) ||
+            (this.status.equals("visited", ignoreCase = true) && this.isVisited == true)
+
     val isPendingReview = this.tieneEdicionPendiente == true || this.hasPendingReview == true || this.enRevision == true || this.pendienteRevision == true
     val gson = Gson()
     val alertasJson = if (!this.saneamientoAlertas.isNullOrEmpty()) gson.toJson(this.saneamientoAlertas) else null
@@ -62,12 +67,6 @@ fun PlanRuteoDto.toEntity(): PlanRuteoEntity {
         ?: this.tipo?.ifBlank { null }
         ?: this.rubro?.ifBlank { null }
 
-    val finalStatus = when {
-        this.status.equals("unvisited", ignoreCase = true) || this.status.equals("referencial", ignoreCase = true) -> "unvisited"
-        this.status.equals("visited", ignoreCase = true) || this.status.equals("VISITADO", ignoreCase = true) -> "visited"
-        else -> this.status ?: "visited"
-    }
-
     return PlanRuteoEntity(
         clientId = this.clientId,
         clientName = this.clientName ?: "Sin Nombre Comercial",
@@ -76,7 +75,7 @@ fun PlanRuteoDto.toEntity(): PlanRuteoEntity {
         address = this.address,
         latitude = this.latitude ?: 0.0,
         longitude = this.longitude ?: 0.0,
-        status = finalStatus,
+        status = serverStatus,
         isVisited = serverIsVisited,
         tipoNegocio = finalTipoNegocio,
         zona = finalZona,
