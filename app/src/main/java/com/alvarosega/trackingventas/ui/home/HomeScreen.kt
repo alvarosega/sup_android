@@ -35,6 +35,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -60,6 +62,149 @@ private val IosSystemPurple = Color(0xFF5856D6)
 private val IosLabelPrimary = Color(0xFF000000)
 private val IosLabelSecondary = Color(0xFF8E8E93)
 private val IosFillQuaternary = Color(0xFFF2F2F7)
+
+@Composable
+fun MonsterWorkdaySwitch(
+    isOperationActive: Boolean,
+    onToggle: () -> Unit
+) {
+    val lidAngle by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isOperationActive) -110f else 0f,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 400, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+        label = "lidAngle"
+    )
+
+    val monsterTopOffset by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (isOperationActive) (-16).dp else 45.dp,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+        ),
+        label = "monsterTopOffset"
+    )
+
+    val pupilOffsetX by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isOperationActive) 2f else -2f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(1200, easing = androidx.compose.animation.core.LinearEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "pupilOffsetX"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(120.dp)
+            .clickable { onToggle() },
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .width(220.dp)
+                .height(110.dp)
+        ) {
+            // MONSTER (Sale por detrás de la tapa)
+            Box(
+                modifier = Modifier
+                    .offset(x = 76.dp, y = monsterTopOffset)
+                    .size(68.dp, 60.dp)
+                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp, bottomStart = 8.dp, bottomEnd = 8.dp))
+                    .background(Color(0xFF2ECC71)),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                Row(
+                    modifier = Modifier.padding(top = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    // Ojo 1
+                    Box(
+                        modifier = Modifier
+                            .size(14.dp)
+                            .clip(CircleShape)
+                            .background(Color.White),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .offset(x = pupilOffsetX.dp)
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(Color.Black)
+                        )
+                    }
+
+                    // Ojo 2
+                    Box(
+                        modifier = Modifier
+                            .size(14.dp)
+                            .clip(CircleShape)
+                            .background(Color.White),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .offset(x = pupilOffsetX.dp)
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(Color.Black)
+                        )
+                    }
+                }
+            }
+
+            // TAPA DE LA CAJA (Gira -110 grados)
+            Box(
+                modifier = Modifier
+                    .offset(x = 22.dp, y = 38.dp)
+                    .size(85.dp, 8.dp)
+                    .graphicsLayer {
+                        rotationZ = lidAngle
+                        transformOrigin = TransformOrigin(0f, 0.5f)
+                    }
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Color(0xFF34495E))
+            )
+
+            // CAJA PRINCIPAL DE LA MÁQUINA
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(68.dp)
+                    .shadow(elevation = 6.dp, shape = RoundedCornerShape(16.dp), spotColor = Color(0xFF1A252F))
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFF2C3E50))
+                    .border(1.dp, Color(0xFF34495E), RoundedCornerShape(16.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                // BOTÓN INTERACTIVO PUSH
+                Box(
+                    modifier = Modifier
+                        .size(180.dp, 44.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isOperationActive) Color(0xFF2ECC71) else Color(0xFFE74C3C))
+                        .border(
+                            width = 1.dp,
+                            color = if (isOperationActive) Color(0xFF27AE60) else Color(0xFFC0392B),
+                            shape = RoundedCornerShape(10.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (isOperationActive) "JORNADA INICIADA" else "INICIAR JORNADA",
+                        style = TextStyle(
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color.White,
+                            letterSpacing = 0.5.sp
+                        )
+                    )
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun HomeScreen(
@@ -292,7 +437,7 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .glassCard(shape = RoundedCornerShape(22.dp), elevation = 4.dp)
-                    .padding(20.dp)
+                    .padding(16.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -305,7 +450,7 @@ fun HomeScreen(
                                 modifier = Modifier
                                     .size(9.dp)
                                     .background(
-                                        if (isOperationActive) IosColors.SystemGreen else IosLabelSecondary,
+                                        if (isOperationActive) IosColors.SystemGreen else IosColors.SystemRed,
                                         CircleShape
                                     )
                                     .border(2.dp, Color.White, CircleShape)
@@ -316,18 +461,18 @@ fun HomeScreen(
                                 style = TextStyle(
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (isOperationActive) IosColors.SystemGreen else IosLabelSecondary,
+                                    color = if (isOperationActive) IosColors.SystemGreen else IosColors.SystemRed,
                                     letterSpacing = 0.8.sp
                                 )
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
 
                         Text(
                             text = if (activeRoute.isNotBlank()) "Ruta: $activeRoute" else "Ruta: General Asignada",
                             style = TextStyle(
-                                fontSize = 18.sp,
+                                fontSize = 17.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = IosLabelPrimary
                             )
@@ -335,43 +480,19 @@ fun HomeScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(0.5.dp)
-                        .background(IosBorderSeparator)
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
-                    onClick = {
+                // Switch Animado del Monstruo Mecánico
+                MonsterWorkdaySwitch(
+                    isOperationActive = isOperationActive,
+                    onToggle = {
                         if (isOperationActive) {
                             showStopDialog = true
                         } else {
                             requestStartPermissions()
                         }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isOperationActive) IosSystemRedLight else IosSystemBlue
-                    ),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
-                ) {
-                    Text(
-                        text = if (isOperationActive) "Finalizar Jornada" else "Iniciar Jornada",
-                        style = TextStyle(
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isOperationActive) IosSystemRed else Color.White
-                        )
-                    )
-                }
+                    }
+                )
             }
 
             Spacer(modifier = Modifier.height(28.dp))
@@ -729,7 +850,6 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
         }
-    }
 
     // Modal de Cierre de Sesión Estilo iOS
     if (showLogoutDialog) {
@@ -804,4 +924,148 @@ fun HomeScreen(
             shape = RoundedCornerShape(14.dp)
         )
     }
+}
+
+@Composable
+fun MonsterWorkdaySwitch(
+    isOperationActive: Boolean,
+    onToggle: () -> Unit
+) {
+    val lidAngle by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isOperationActive) -110f else 0f,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 400, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+        label = "lidAngle"
+    )
+
+    val monsterTopOffset by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (isOperationActive) (-16).dp else 45.dp,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+        ),
+        label = "monsterTopOffset"
+    )
+
+    val pupilOffsetX by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isOperationActive) 2f else -2f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(1200, easing = androidx.compose.animation.core.LinearEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "pupilOffsetX"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(120.dp)
+            .clickable { onToggle() },
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .width(220.dp)
+                .height(110.dp)
+        ) {
+            // MONSTER (Sale por detrás de la tapa)
+            Box(
+                modifier = Modifier
+                    .offset(x = 76.dp, y = monsterTopOffset)
+                    .size(68.dp, 60.dp)
+                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp, bottomStart = 8.dp, bottomEnd = 8.dp))
+                    .background(Color(0xFF2ECC71)),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                Row(
+                    modifier = Modifier.padding(top = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    // Ojo 1
+                    Box(
+                        modifier = Modifier
+                            .size(14.dp)
+                            .clip(CircleShape)
+                            .background(Color.White),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .offset(x = pupilOffsetX.dp)
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(Color.Black)
+                        )
+                    }
+
+                    // Ojo 2
+                    Box(
+                        modifier = Modifier
+                            .size(14.dp)
+                            .clip(CircleShape)
+                            .background(Color.White),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .offset(x = pupilOffsetX.dp)
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(Color.Black)
+                        )
+                    }
+                }
+            }
+
+            // TAPA DE LA CAJA (Gira -110 grados)
+            Box(
+                modifier = Modifier
+                    .offset(x = 22.dp, y = 38.dp)
+                    .size(85.dp, 8.dp)
+                    .graphicsLayer {
+                        rotationZ = lidAngle
+                        transformOrigin = TransformOrigin(0f, 0.5f)
+                    }
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Color(0xFF34495E))
+            )
+
+            // CAJA PRINCIPAL DE LA MÁQUINA
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(68.dp)
+                    .shadow(elevation = 6.dp, shape = RoundedCornerShape(16.dp), spotColor = Color(0xFF1A252F))
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFF2C3E50))
+                    .border(1.dp, Color(0xFF34495E), RoundedCornerShape(16.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                // BOTÓN INTERACTIVO PUSH
+                Box(
+                    modifier = Modifier
+                        .size(180.dp, 44.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isOperationActive) Color(0xFF2ECC71) else Color(0xFFE74C3C))
+                        .border(
+                            width = 1.dp,
+                            color = if (isOperationActive) Color(0xFF27AE60) else Color(0xFFC0392B),
+                            shape = RoundedCornerShape(10.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (isOperationActive) "JORNADA INICIADA" else "INICIAR JORNADA",
+                        style = TextStyle(
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color.White,
+                            letterSpacing = 0.5.sp
+                        )
+                    )
+                }
+            }
+        }
+    }
+}
 }
