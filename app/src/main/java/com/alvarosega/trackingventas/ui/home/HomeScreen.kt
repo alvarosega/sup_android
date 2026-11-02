@@ -183,10 +183,10 @@ fun MonsterWorkdaySwitch(
                     modifier = Modifier
                         .size(180.dp, 44.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(if (isOperationActive) Color(0xFF2ECC71) else Color(0xFFE74C3C))
+                        .background(Color(0xFF2ECC71))
                         .border(
                             width = 1.dp,
-                            color = if (isOperationActive) Color(0xFF27AE60) else Color(0xFFC0392B),
+                            color = Color(0xFF27AE60),
                             shape = RoundedCornerShape(10.dp)
                         ),
                     contentAlignment = Alignment.Center
@@ -361,6 +361,8 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val userName by viewModel.userName.collectAsState()
+
                 Box(
                     modifier = Modifier
                         .glassCard(shape = RoundedCornerShape(14.dp), elevation = 4.dp)
@@ -370,16 +372,16 @@ fun HomeScreen(
                         Box(
                             modifier = Modifier
                                 .size(8.dp)
-                                .background(IosColors.SystemBlue, CircleShape)
+                                .background(IosColors.SystemGreen, CircleShape)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "TRACKING VENTAS",
+                            text = if (userName.isNotBlank()) "👤 $userName" else if (activeRoute.isNotBlank()) "👤 $activeRoute" else "👤 VENDEDOR",
                             style = TextStyle(
                                 fontSize = 13.sp,
-                                fontWeight = FontWeight.Black,
-                                color = IosColors.SystemBlue,
-                                letterSpacing = 1.sp
+                                fontWeight = FontWeight.Bold,
+                                color = IosLabelPrimary,
+                                letterSpacing = 0.5.sp
                             )
                         )
                     }
@@ -454,7 +456,7 @@ fun HomeScreen(
                             modifier = Modifier
                                 .size(10.dp)
                                 .background(
-                                    if (isOperationActive) IosColors.SystemGreen else IosColors.SystemRed,
+                                    IosColors.SystemGreen,
                                     CircleShape
                                 )
                                 .border(2.dp, Color.White, CircleShape)
@@ -465,7 +467,7 @@ fun HomeScreen(
                             style = TextStyle(
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isOperationActive) IosColors.SystemGreen else IosColors.SystemRed,
+                                color = IosColors.SystemGreen,
                                 letterSpacing = 0.8.sp
                             )
                         )
@@ -1038,10 +1040,10 @@ fun MonsterWorkdaySwitch(
                     modifier = Modifier
                         .size(180.dp, 44.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(if (isOperationActive) Color(0xFF2ECC71) else Color(0xFFE74C3C))
+                        .background(Color(0xFF2ECC71))
                         .border(
                             width = 1.dp,
-                            color = if (isOperationActive) Color(0xFF27AE60) else Color(0xFFC0392B),
+                            color = Color(0xFF27AE60),
                             shape = RoundedCornerShape(10.dp)
                         ),
                     contentAlignment = Alignment.Center

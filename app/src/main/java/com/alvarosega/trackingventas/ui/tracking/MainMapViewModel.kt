@@ -57,6 +57,7 @@ class MainMapViewModel @Inject constructor(
 
     val isOperationActive: StateFlow<Boolean> = sessionPreferences.isOperationActive
     val activeRoute: StateFlow<String> = sessionPreferences.activeRoute
+    val userName: StateFlow<String> = MutableStateFlow(sessionPreferences.getUserNameDirect())
     val activeDay: StateFlow<String> = sessionPreferences.activeDay
     val workdayLimitTime: StateFlow<String?> = sessionPreferences.workdayLimitTime
     val activeModules: StateFlow<Map<String, Boolean>> = moduleConfigManager.activeModules

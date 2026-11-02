@@ -67,9 +67,15 @@ class SessionPreferences @Inject constructor(
         return prefs.getString(KEY_LIMIT_TIME, null)
     }
 
+    fun getUserNameDirect(): String {
+        return prefs.getString(KEY_USERNAME, "")?.ifBlank { getActiveRouteDirect() }
+            ?: getActiveRouteDirect()
+    }
+
     companion object {
         private const val KEY_OPERATION_ACTIVE = "key_operation_active"
         private const val KEY_ASSIGNED_ROUTE = "key_assigned_route"
         private const val KEY_LIMIT_TIME = "key_workday_limit_time"
+        private const val KEY_USERNAME = "username"
     }
 }
