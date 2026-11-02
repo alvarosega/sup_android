@@ -13,6 +13,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -257,201 +259,200 @@ fun VisitaRegistrationScreen(
                             }
                         }
                     } else {
-                        LazyColumn(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth()
-                        ) {
-                            itemsIndexed(productosHistorial) { idx, prod ->
-                                val prodKey = viewModel.getProdKey(prod, idx)
-                                val currentStockStr = stockMap[prodKey] ?: ""
-                                var showHistoryDetail by remember { mutableStateOf(false) }
+                        // Chips de Filtrado y Agrupamiento por Jerarquía / Categoría
+                        val uniqueJerarquias = remember(productosHistorial) {
+                            val list = mutableListOf("Todos")
+                            productosHistorial.mapNotNull { it.jerarquia1 ?: it.categoria }.distinct().forEach {
+                                if (!list.contains(it) && it.isNotBlank()) list.add(it)
+                            }
+                            list
+                        }
+                        var selectedJerarquiaFilter by remember { mutableStateOf("Todos") }
 
-                                Column(
+                        val filteredProductsList = remember(productosHistorial, selectedJerarquiaFilter) {
+                            if (selectedJerarquiaFilter == "Todos") {
+                                productosHistorial
+                            } else {
+                                productosHistorial.filter { (it.jerarquia1 ?: it.categoria) == selectedJerarquiaFilter }
+                            }
+                        }
+
+                        Column(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                            if (uniqueJerarquias.size > 2) {
+                                LazyRow(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(IosCardSurface)
-                                        .border(0.8.dp, IosBorderSeparator, RoundedCornerShape(12.dp))
-                                        .padding(12.dp)
+                                        .padding(bottom = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.Top
-                                    ) {
-                                        Column(
+                                    items(uniqueJerarquias) { jer ->
+                                        val isSel = selectedJerarquiaFilter == jer
+                                        Box(
                                             modifier = Modifier
-                                                .weight(1f)
-                                                .clickable { showHistoryDetail = !showHistoryDetail }
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(if (isSel) IosSystemBlue else IosFillQuaternary)
+                                                .clickable { selectedJerarquiaFilter = jer }
+                                                .padding(horizontal = 10.dp, vertical = 6.dp)
                                         ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = jer,
+                                                fontSize = 12.sp,
+                                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (isSel) Color.White else IosLabelSecondary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            LazyColumn(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth()
+                            ) {
+                                itemsIndexed(filteredProductsList) { idx, prod ->
+                                    val prodKey = viewModel.getProdKey(prod, idx)
+                                    val currentStockStr = stockMap[prodKey] ?: ""
+                                    var showHistoryDetail by remember { mutableStateOf(false) }
+
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(IosCardSurface)
+                                            .border(0.8.dp, IosBorderSeparator, RoundedCornerShape(12.dp))
+                                            .padding(12.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .clickable { showHistoryDetail = !showHistoryDetail }
+                                            ) {
                                                 Text(
                                                     text = prod.producto ?: "Producto",
                                                     style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary)
                                                 )
-                                                val badgeText = prod.jerarquia3 ?: prod.categoria
-                                                if (!badgeText.isNullOrBlank()) {
-                                                    Spacer(modifier = Modifier.width(6.dp))
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .clip(RoundedCornerShape(6.dp))
-                                                            .background(IosSystemBlueLight)
-                                                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                                                    ) {
-                                                        Text(
-                                                            text = badgeText,
-                                                            fontSize = 10.sp,
-                                                            fontWeight = FontWeight.Bold,
-                                                            color = IosSystemBlue
-                                                        )
-                                                    }
+
+                                                val totalEventos = (prod.historialCompras?.size ?: 0) + (prod.historicoStocks?.size ?: 0)
+                                                if (totalEventos > 0) {
+                                                    Spacer(modifier = Modifier.height(3.dp))
+                                                    Text(
+                                                        text = if (showHistoryDetail) "▲ Ocultar historial" else "▼ Ver historial completo ($totalEventos)",
+                                                        style = TextStyle(fontSize = 12.sp, color = IosSystemBlue, fontWeight = FontWeight.Bold)
+                                                    )
                                                 }
                                             }
 
-                                            Spacer(modifier = Modifier.height(4.dp))
-
-                                            // Métrica de 3 Pilares de Auditoría
-                                            val ultCompraStr = if (prod.ultimaCompra?.fecha != null) "${prod.ultimaCompra.cantidad ?: 0} un. (${prod.ultimaCompra.fecha})" else "Sin compras"
-                                            val ultStockStr = if (prod.ultimoStock?.fecha != null) "${prod.ultimoStock.stockFisico} un. (${prod.ultimoStock.fecha})" else "Sin censo previo"
-
-                                            Text(
-                                                text = "• Teórico disponible: ${prod.stockTeoricoDisponible ?: (prod.totalComprado ?: 0)} un.",
-                                                style = TextStyle(fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
-                                            )
-                                            Text(
-                                                text = "• Última compra: $ultCompraStr",
-                                                style = TextStyle(fontSize = 11.sp, color = IosLabelSecondary)
-                                            )
-                                            Text(
-                                                text = "• Último censo físico: $ultStockStr",
-                                                style = TextStyle(fontSize = 11.sp, color = IosLabelSecondary)
-                                            )
-
-                                            val historyCount = (prod.historialCompras?.size ?: 0) + (prod.historicoStocks?.size ?: 0)
-                                            if (historyCount > 0) {
-                                                Spacer(modifier = Modifier.height(3.dp))
-                                                Text(
-                                                    text = if (showHistoryDetail) "▲ Ocultar auditoría" else "▼ Ver historial completo ($historyCount)",
-                                                    style = TextStyle(fontSize = 11.sp, color = IosSystemBlue, fontWeight = FontWeight.Bold)
-                                                )
-                                            }
-                                        }
-
-                                        // Stepper de Conteo de Stock Físico Independiente
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                        ) {
-                                            // Botón Menos
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(36.dp)
-                                                    .clip(CircleShape)
-                                                    .background(IosFillQuaternary)
-                                                    .border(1.dp, IosBorderSeparator, CircleShape)
-                                                    .clickable { viewModel.adjustStockFisico(prodKey, -1) },
-                                                contentAlignment = Alignment.Center
+                                            // Stepper de Conteo de Stock Físico Independiente
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                                             ) {
-                                                Text("-", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = IosLabelPrimary)
-                                            }
+                                                // Botón Menos
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(36.dp)
+                                                        .clip(CircleShape)
+                                                        .background(IosFillQuaternary)
+                                                        .border(1.dp, IosBorderSeparator, CircleShape)
+                                                        .clickable { viewModel.adjustStockFisico(prodKey, -1) },
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text("-", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = IosLabelPrimary)
+                                                }
 
-                                            // Campo Numérico
-                                            OutlinedTextField(
-                                                value = currentStockStr,
-                                                onValueChange = { input ->
-                                                    viewModel.updateStockInput(prodKey, input)
-                                                },
-                                                singleLine = true,
-                                                placeholder = { Text("Cant", fontSize = 12.sp, color = IosLabelSecondary) },
-                                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                                textStyle = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = IosSystemGreen, textAlign = androidx.compose.ui.text.style.TextAlign.Center),
-                                                modifier = Modifier.width(58.dp),
-                                                shape = RoundedCornerShape(8.dp),
-                                                colors = OutlinedTextFieldDefaults.colors(
-                                                    focusedContainerColor = IosCardSurface,
-                                                    unfocusedContainerColor = IosCardSurface,
-                                                    focusedBorderColor = IosSystemGreen,
-                                                    unfocusedBorderColor = if (currentStockStr.isBlank()) IosSystemRed else IosBorderSeparator
+                                                // Campo Numérico
+                                                OutlinedTextField(
+                                                    value = currentStockStr,
+                                                    onValueChange = { input ->
+                                                        viewModel.updateStockInput(prodKey, input)
+                                                    },
+                                                    singleLine = true,
+                                                    placeholder = { Text("Cant", fontSize = 12.sp, color = IosLabelSecondary) },
+                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                                    textStyle = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = IosSystemGreen, textAlign = androidx.compose.ui.text.style.TextAlign.Center),
+                                                    modifier = Modifier.width(58.dp),
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    colors = OutlinedTextFieldDefaults.colors(
+                                                        focusedContainerColor = IosCardSurface,
+                                                        unfocusedContainerColor = IosCardSurface,
+                                                        focusedBorderColor = IosSystemGreen,
+                                                        unfocusedBorderColor = if (currentStockStr.isBlank()) IosSystemRed else IosBorderSeparator
+                                                    )
                                                 )
-                                            )
 
-                                            // Botón Más
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(36.dp)
-                                                    .clip(CircleShape)
-                                                    .background(IosSystemBlue)
-                                                    .clickable { viewModel.adjustStockFisico(prodKey, 1) },
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Text("+", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color.White)
-                                            }
-                                        }
-                                    }
-
-                                    // Despliegue del Historial de Compras y Censos de Stock Físico
-                                    val historyCompras = prod.historialCompras ?: emptyList()
-                                    val historyStocks = prod.historicoStocks ?: emptyList()
-
-                                    if (showHistoryDetail && (historyCompras.isNotEmpty() || historyStocks.isNotEmpty())) {
-                                        Spacer(modifier = Modifier.height(10.dp))
-                                        Column(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clip(RoundedCornerShape(10.dp))
-                                                .background(IosFillQuaternary)
-                                                .padding(10.dp)
-                                        ) {
-                                            if (historyCompras.isNotEmpty()) {
-                                                Text(
-                                                    text = "COMPRAS RECIENTES (${historyCompras.size})",
-                                                    fontSize = 10.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = IosSystemBlue,
-                                                    letterSpacing = 0.5.sp
-                                                )
-                                                Spacer(modifier = Modifier.height(2.dp))
-                                                historyCompras.forEach { item ->
-                                                    Row(
-                                                        modifier = Modifier.fillMaxWidth(),
-                                                        horizontalArrangement = Arrangement.SpaceBetween
-                                                    ) {
-                                                        Text("• ${item.fecha ?: "-"}", fontSize = 11.sp, color = IosLabelPrimary)
-                                                        Text("Compró: ${item.cantidad ?: 0} un.", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosSystemBlue)
-                                                    }
+                                                // Botón Más
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(36.dp)
+                                                        .clip(CircleShape)
+                                                        .background(IosSystemBlue)
+                                                        .clickable { viewModel.adjustStockFisico(prodKey, 1) },
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text("+", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color.White)
                                                 }
                                             }
+                                        }
 
-                                            if (historyCompras.isNotEmpty() && historyStocks.isNotEmpty()) {
-                                                Spacer(modifier = Modifier.height(6.dp))
+                                        // Despliegue Cronológico Unificado de Compras y Censos de Stock Físico
+                                        if (showHistoryDetail) {
+                                            data class EventoTimeline(val fecha: String, val tipo: String, val cantidad: Int)
+
+                                            val comprasList = (prod.historialCompras ?: emptyList()).map {
+                                                EventoTimeline(fecha = it.fecha ?: "-", tipo = "COMPRA", cantidad = it.cantidad ?: 0)
+                                            }
+                                            val stocksList = (prod.historicoStocks ?: emptyList()).map {
+                                                EventoTimeline(fecha = it.fecha, tipo = "STOCK", cantidad = it.stockFisico)
                                             }
 
-                                            if (historyStocks.isNotEmpty()) {
-                                                Text(
-                                                    text = "CENSOS FÍSICOS ANTERIORES (${historyStocks.size})",
-                                                    fontSize = 10.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = IosSystemGreen,
-                                                    letterSpacing = 0.5.sp
-                                                )
-                                                Spacer(modifier = Modifier.height(2.dp))
-                                                historyStocks.forEach { item ->
-                                                    Row(
-                                                        modifier = Modifier.fillMaxWidth(),
-                                                        horizontalArrangement = Arrangement.SpaceBetween
-                                                    ) {
-                                                        Text("• ${item.fecha}", fontSize = 11.sp, color = IosLabelPrimary)
-                                                        Text("Stock: ${item.stockFisico} un.", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosSystemGreen)
+                                            val timelineList = (comprasList + stocksList).sortedByDescending { it.fecha }
+
+                                            if (timelineList.isNotEmpty()) {
+                                                Spacer(modifier = Modifier.height(10.dp))
+                                                Column(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clip(RoundedCornerShape(10.dp))
+                                                        .background(IosFillQuaternary)
+                                                        .padding(10.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "HISTORIAL CRONOLÓGICO DE MOVIMIENTOS",
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = IosLabelSecondary,
+                                                        letterSpacing = 0.5.sp
+                                                    )
+                                                    Spacer(modifier = Modifier.height(4.dp))
+                                                    timelineList.forEach { ev ->
+                                                        Row(
+                                                            modifier = Modifier.fillMaxWidth(),
+                                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            if (ev.tipo == "COMPRA") {
+                                                                Text("🛒 Compra: +${ev.cantidad} un.", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosSystemBlue)
+                                                            } else {
+                                                                Text("📋 Stock en PDV: ${ev.cantidad} un.", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosSystemGreen)
+                                                            }
+                                                            Text(ev.fecha, fontSize = 11.sp, color = IosLabelSecondary)
+                                                        }
                                                     }
                                                 }
                                             }
                                         }
                                     }
+                                    Spacer(modifier = Modifier.height(8.dp))
                                 }
-                                Spacer(modifier = Modifier.height(8.dp))
                             }
                         }
+                    }
 
                         // Campo de Observaciones específicas del Inventario en PDV
                         Spacer(modifier = Modifier.height(8.dp))
@@ -505,7 +506,6 @@ fun VisitaRegistrationScreen(
                             Text("Continuar a Atención y Fotografía ➔", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.White)
                         }
                     }
-                }
             } else {
                 // PASO 2: ATENCIÓN, FOTOGRAFÍA Y FINALIZACIÓN
                 Column(
