@@ -26,6 +26,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
@@ -869,8 +870,8 @@ fun MainMapScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Place,
-                            contentDescription = "Ver / Ocultar Referenciales",
+                            imageVector = Icons.Default.Home,
+                            contentDescription = "Ver / Ocultar Referenciales (Casas)",
                             tint = if (showUnvisited) Color.White else IosLabelSecondary,
                             modifier = Modifier.size(20.dp)
                         )
@@ -1005,21 +1006,34 @@ fun MainMapScreen(
 
                             Spacer(modifier = Modifier.height(4.dp))
 
-                            // Nombre del Cliente y Dirección
+                            val isReferencial = isReferencialClient(client)
+
+                            // Nombre del Cliente, Código y Teléfono para Referenciales en Modo Visitas
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 Text(
                                     text = client.clientName,
                                     style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary)
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = "#${client.clientId} • ${client.tipoNegocio ?: "General"} • ${client.zona ?: "Sin Zona"}",
-                                    style = TextStyle(fontSize = 12.sp, color = IosLabelSecondary)
-                                )
-                                Text(
-                                    text = client.address ?: "Sin dirección registrada",
-                                    style = TextStyle(fontSize = 12.sp, color = IosLabelSecondary)
-                                )
+                                if (isReferencial && !isCensoMode) {
+                                    Text(
+                                        text = "Código: #${client.clientId}",
+                                        style = TextStyle(fontSize = 12.sp, color = IosLabelSecondary)
+                                    )
+                                    Text(
+                                        text = "Teléfono: ${client.telefono?.ifBlank { null } ?: client.celular?.ifBlank { null } ?: "Sin teléfono registrado"}",
+                                        style = TextStyle(fontSize = 12.sp, color = IosSystemBlue, fontWeight = FontWeight.SemiBold)
+                                    )
+                                } else {
+                                    Text(
+                                        text = "#${client.clientId} • ${client.tipoNegocio ?: "General"} • ${client.zona ?: "Sin Zona"}",
+                                        style = TextStyle(fontSize = 12.sp, color = IosLabelSecondary)
+                                    )
+                                    Text(
+                                        text = client.address ?: "Sin dirección registrada",
+                                        style = TextStyle(fontSize = 12.sp, color = IosLabelSecondary)
+                                    )
+                                }
                             }
 
                             // Caja de Alerta de Saneamiento solo en Modo Censo
