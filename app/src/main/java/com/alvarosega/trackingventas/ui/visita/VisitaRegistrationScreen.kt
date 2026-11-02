@@ -63,6 +63,12 @@ private val IosLabelPrimary = Color(0xFF000000)
 private val IosLabelSecondary = Color(0xFF8E8E93)
 private val IosFillQuaternary = Color(0xFFE5E5EA)
 
+private data class EventoTimelineData(
+    val fecha: String,
+    val tipo: String,
+    val cantidad: Int
+)
+
 @Composable
 fun VisitaRegistrationScreen(
     viewModel: VisitaViewModel,
@@ -259,45 +265,125 @@ fun VisitaRegistrationScreen(
                             }
                         }
                     } else {
-                        // Chips de Filtrado y Agrupamiento por Jerarquía / Categoría
-                        val uniqueJerarquias = remember(productosHistorial) {
+                        // Chips de Filtrado y Agrupamiento Jerárquico Multicapa (J1 -> J2 -> J3)
+                        var selectedJ1 by remember { mutableStateOf("Todos") }
+                        var selectedJ2 by remember { mutableStateOf("Todos") }
+                        var selectedJ3 by remember { mutableStateOf("Todos") }
+
+                        val j1List = remember(productosHistorial) {
                             val list = mutableListOf("Todos")
                             productosHistorial.mapNotNull { it.jerarquia1 ?: it.categoria }.distinct().forEach {
                                 if (!list.contains(it) && it.isNotBlank()) list.add(it)
                             }
                             list
                         }
-                        var selectedJerarquiaFilter by remember { mutableStateOf("Todos") }
 
-                        val filteredProductsList = remember(productosHistorial, selectedJerarquiaFilter) {
-                            if (selectedJerarquiaFilter == "Todos") {
-                                productosHistorial
-                            } else {
-                                productosHistorial.filter { (it.jerarquia1 ?: it.categoria) == selectedJerarquiaFilter }
+                        val j2List = remember(productosHistorial, selectedJ1) {
+                            val base = if (selectedJ1 == "Todos") productosHistorial else productosHistorial.filter { (it.jerarquia1 ?: it.categoria) == selectedJ1 }
+                            val list = mutableListOf("Todos")
+                            base.mapNotNull { it.jerarquia2 }.distinct().forEach {
+                                if (!list.contains(it) && it.isNotBlank()) list.add(it)
                             }
+                            list
+                        }
+
+                        val j3List = remember(productosHistorial, selectedJ1, selectedJ2) {
+                            var base = if (selectedJ1 == "Todos") productosHistorial else productosHistorial.filter { (it.jerarquia1 ?: it.categoria) == selectedJ1 }
+                            if (selectedJ2 != "Todos") base = base.filter { it.jerarquia2 == selectedJ2 }
+                            val list = mutableListOf("Todos")
+                            base.mapNotNull { it.jerarquia3 }.distinct().forEach {
+                                if (!list.contains(it) && it.isNotBlank()) list.add(it)
+                            }
+                            list
+                        }
+
+                        val filteredProductsList = remember(productosHistorial, selectedJ1, selectedJ2, selectedJ3) {
+                            var list = productosHistorial
+                            if (selectedJ1 != "Todos") list = list.filter { (it.jerarquia1 ?: it.categoria) == selectedJ1 }
+                            if (selectedJ2 != "Todos") list = list.filter { it.jerarquia2 == selectedJ2 }
+                            if (selectedJ3 != "Todos") list = list.filter { it.jerarquia3 == selectedJ3 }
+                            list
                         }
 
                         Column(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                            if (uniqueJerarquias.size > 2) {
+                            // Fila 1: Jerarquía 1 / Categoría Principal
+                            if (j1List.size > 2) {
                                 LazyRow(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(bottom = 8.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
-                                    items(uniqueJerarquias) { jer ->
-                                        val isSel = selectedJerarquiaFilter == jer
+                                    items(j1List, key = { "j1_$it" }) { jer ->
+                                        val isSel = selectedJ1 == jer
                                         Box(
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(8.dp))
                                                 .background(if (isSel) IosSystemBlue else IosFillQuaternary)
-                                                .clickable { selectedJerarquiaFilter = jer }
-                                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                                                .clickable {
+                                                    selectedJ1 = jer
+                                                    selectedJ2 = "Todos"
+                                                    selectedJ3 = "Todos"
+                                                }
+                                                .padding(horizontal = 10.dp, vertical = 5.dp)
                                         ) {
                                             Text(
                                                 text = jer,
-                                                fontSize = 12.sp,
+                                                fontSize = 11.sp,
                                                 fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (isSel) Color.White else IosLabelSecondary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Fila 2: Jerarquía 2 / Subcategoría
+                            if (j2List.size > 2) {
+                                LazyRow(
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    items(j2List, key = { "j2_$it" }) { jer ->
+                                        val isSel = selectedJ2 == jer
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(if (isSel) IosSystemPurple else IosFillQuaternary)
+                                                .clickable {
+                                                    selectedJ2 = jer
+                                                    selectedJ3 = "Todos"
+                                                }
+                                                .padding(horizontal = 9.dp, vertical = 4.dp)
+                                        ) {
+                                            Text(
+                                                text = jer,
+                                                fontSize = 11.sp,
+                                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (isSel) Color.White else IosLabelSecondary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Fila 3: Jerarquía 3 / Marca
+                            if (j3List.size > 2) {
+                                LazyRow(
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    items(j3List, key = { "j3_$it" }) { jer ->
+                                        val isSel = selectedJ3 == jer
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(if (isSel) IosSystemGreen else IosFillQuaternary)
+                                                .clickable { selectedJ3 = jer }
+                                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                        ) {
+                                            Text(
+                                                text = jer,
+                                                fontSize = 10.sp,
+                                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
                                                 color = if (isSel) Color.White else IosLabelSecondary
                                             )
                                         }
@@ -310,10 +396,23 @@ fun VisitaRegistrationScreen(
                                     .weight(1f)
                                     .fillMaxWidth()
                             ) {
-                                itemsIndexed(filteredProductsList) { idx, prod ->
+                                itemsIndexed(
+                                    items = filteredProductsList,
+                                    key = { idx, prod -> prod.productoId ?: prod.codigo ?: idx }
+                                ) { idx, prod ->
                                     val prodKey = viewModel.getProdKey(prod, idx)
                                     val currentStockStr = stockMap[prodKey] ?: ""
                                     var showHistoryDetail by remember { mutableStateOf(false) }
+
+                                    val timelineList = remember(prod) {
+                                        val comprasList = (prod.historialCompras ?: emptyList()).map {
+                                            EventoTimelineData(fecha = it.fecha ?: "-", tipo = "COMPRA", cantidad = it.cantidad ?: 0)
+                                        }
+                                        val stocksList = (prod.historicoStocks ?: emptyList()).map {
+                                            EventoTimelineData(fecha = it.fecha, tipo = "STOCK", cantidad = it.stockFisico)
+                                        }
+                                        (comprasList + stocksList).sortedByDescending { it.fecha }
+                                    }
 
                                     Column(
                                         modifier = Modifier
@@ -338,11 +437,10 @@ fun VisitaRegistrationScreen(
                                                     style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary)
                                                 )
 
-                                                val totalEventos = (prod.historialCompras?.size ?: 0) + (prod.historicoStocks?.size ?: 0)
-                                                if (totalEventos > 0) {
+                                                if (timelineList.isNotEmpty()) {
                                                     Spacer(modifier = Modifier.height(3.dp))
                                                     Text(
-                                                        text = if (showHistoryDetail) "▲ Ocultar historial" else "▼ Ver historial completo ($totalEventos)",
+                                                        text = if (showHistoryDetail) "▲ Ocultar historial" else "▼ Ver historial completo (${timelineList.size})",
                                                         style = TextStyle(fontSize = 12.sp, color = IosSystemBlue, fontWeight = FontWeight.Bold)
                                                     )
                                                 }
@@ -401,48 +499,35 @@ fun VisitaRegistrationScreen(
                                         }
 
                                         // Despliegue Cronológico Unificado de Compras y Censos de Stock Físico
-                                        if (showHistoryDetail) {
-                                            data class EventoTimeline(val fecha: String, val tipo: String, val cantidad: Int)
-
-                                            val comprasList = (prod.historialCompras ?: emptyList()).map {
-                                                EventoTimeline(fecha = it.fecha ?: "-", tipo = "COMPRA", cantidad = it.cantidad ?: 0)
-                                            }
-                                            val stocksList = (prod.historicoStocks ?: emptyList()).map {
-                                                EventoTimeline(fecha = it.fecha, tipo = "STOCK", cantidad = it.stockFisico)
-                                            }
-
-                                            val timelineList = (comprasList + stocksList).sortedByDescending { it.fecha }
-
-                                            if (timelineList.isNotEmpty()) {
-                                                Spacer(modifier = Modifier.height(10.dp))
-                                                Column(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .clip(RoundedCornerShape(10.dp))
-                                                        .background(IosFillQuaternary)
-                                                        .padding(10.dp)
-                                                ) {
-                                                    Text(
-                                                        text = "HISTORIAL CRONOLÓGICO DE MOVIMIENTOS",
-                                                        fontSize = 10.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = IosLabelSecondary,
-                                                        letterSpacing = 0.5.sp
-                                                    )
-                                                    Spacer(modifier = Modifier.height(4.dp))
-                                                    timelineList.forEach { ev ->
-                                                        Row(
-                                                            modifier = Modifier.fillMaxWidth(),
-                                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                                            verticalAlignment = Alignment.CenterVertically
-                                                        ) {
-                                                            if (ev.tipo == "COMPRA") {
-                                                                Text("🛒 Compra: +${ev.cantidad} un.", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosSystemBlue)
-                                                            } else {
-                                                                Text("📋 Stock en PDV: ${ev.cantidad} un.", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosSystemGreen)
-                                                            }
-                                                            Text(ev.fecha, fontSize = 11.sp, color = IosLabelSecondary)
+                                        if (showHistoryDetail && timelineList.isNotEmpty()) {
+                                            Spacer(modifier = Modifier.height(10.dp))
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clip(RoundedCornerShape(10.dp))
+                                                    .background(IosFillQuaternary)
+                                                    .padding(10.dp)
+                                            ) {
+                                                Text(
+                                                    text = "HISTORIAL CRONOLÓGICO DE MOVIMIENTOS",
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = IosLabelSecondary,
+                                                    letterSpacing = 0.5.sp
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                timelineList.forEach { ev ->
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        if (ev.tipo == "COMPRA") {
+                                                            Text("🛒 Compra: +${ev.cantidad} un.", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosSystemBlue)
+                                                        } else {
+                                                            Text("📋 Stock en PDV: ${ev.cantidad} un.", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosSystemGreen)
                                                         }
+                                                        Text(ev.fecha, fontSize = 11.sp, color = IosLabelSecondary)
                                                     }
                                                 }
                                             }
