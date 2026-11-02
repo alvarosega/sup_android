@@ -241,7 +241,7 @@ fun MainMapScreen(
                 if (!hasCenteredOnInitialLocation || loc.accuracy < bestGpsAccuracy) {
                     bestGpsAccuracy = loc.accuracy
                     mapView.controller.animateTo(GeoPoint(loc.latitude, loc.longitude))
-                    mapView.controller.setZoom(18.0)
+                    mapView.controller.setZoom(16.0)
                     hasCenteredOnInitialLocation = true
                 }
             }
