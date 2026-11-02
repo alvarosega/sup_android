@@ -477,8 +477,11 @@ fun VisitaRegistrationScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // 3. SECCIÓN: CENSO DE STOCK / INVENTARIO EN PDV (CONDICIONAL - Preventa, Sin Dinero y Atendido)
-                val requiresStockCensus = selectedStatus == "PREVENTA" || selectedStatus == "SIN_DINERO" || selectedStatus == "ATENDIDO"
+                // 3. SECCIÓN: CENSO DE STOCK / INVENTARIO EN PDV (CONDICIONAL - Solo si no es Tienda Cerrada)
+                val requiresStockCensus = selectedStatus == "PREVENTA" ||
+                        selectedStatus == "SIN_DINERO" ||
+                        selectedStatus == "AUSENTE" ||
+                        selectedStatus == "ATENDIDO"
                 if (requiresStockCensus) {
                     if (isInventarioActive && productosHistorial.isNotEmpty()) {
                         Text(
@@ -754,23 +757,6 @@ fun VisitaRegistrationScreen(
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                     }
-                } else if (selectedStatus != null) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFFFFF3E0))
-                            .border(0.8.dp, Color(0xFFFFB74D), RoundedCornerShape(12.dp))
-                            .padding(12.dp)
-                    ) {
-                        Text(
-                            text = "Visita seleccionada como '${selectedStatus?.replace("_", " ")}'. La toma de inventario está eximida.",
-                            fontSize = 12.sp,
-                            color = Color(0xFFE65100),
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
                 }
 
                 // 4. SECCIÓN: Evidencia Fotográfica
