@@ -22,7 +22,6 @@ data class PreventasPendientesResponseDto(
 
 data class PreventaPendienteDto(
     @SerializedName(value = "nro_preventa", alternate = ["pre_venta_id", "id"]) val nroPreventa: Long = 0L,
-    @SerializedName("pre_venta_id") val preVentaId: Long? = null,
     @SerializedName(value = "fecha_preventa", alternate = ["fecha", "created_at"]) val fechaPreventa: String? = "",
     @SerializedName("dias_transcurridos") val diasTranscurridos: Int? = 0,
     @SerializedName(value = "cliente_id", alternate = ["id_cliente"]) val clienteId: String = "",
