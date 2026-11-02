@@ -38,6 +38,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import com.alvarosega.trackingventas.ui.theme.IosColors
+import com.alvarosega.trackingventas.ui.theme.glassCard
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -289,15 +291,7 @@ fun HomeScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(
-                        elevation = 4.dp,
-                        shape = RoundedCornerShape(20.dp),
-                        ambientColor = Color(0x0D000000),
-                        spotColor = Color(0x0D000000)
-                    )
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(IosCardSurface)
-                    .border(0.8.dp, IosBorderSeparator, RoundedCornerShape(20.dp))
+                    .glassCard(shape = RoundedCornerShape(22.dp), elevation = 4.dp)
                     .padding(20.dp)
             ) {
                 Row(
@@ -309,37 +303,36 @@ fun HomeScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
-                                    .size(8.dp)
+                                    .size(9.dp)
                                     .background(
-                                        if (isOperationActive) IosSystemGreen else IosLabelSecondary,
+                                        if (isOperationActive) IosColors.SystemGreen else IosLabelSecondary,
                                         CircleShape
                                     )
+                                    .border(2.dp, Color.White, CircleShape)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = if (isOperationActive) "JORNADA EN CURSO" else "JORNADA DETENIDA",
                                 style = TextStyle(
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (isOperationActive) IosSystemGreen else IosLabelSecondary,
-                                    letterSpacing = 0.5.sp
+                                    color = if (isOperationActive) IosColors.SystemGreen else IosLabelSecondary,
+                                    letterSpacing = 0.8.sp
                                 )
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
 
                         Text(
                             text = if (activeRoute.isNotBlank()) "Ruta: $activeRoute" else "Ruta: General Asignada",
                             style = TextStyle(
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
                                 color = IosLabelPrimary
                             )
                         )
                     }
-
-
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -364,7 +357,7 @@ fun HomeScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (isOperationActive) IosSystemRedLight else IosSystemBlue
                     ),
@@ -374,7 +367,7 @@ fun HomeScreen(
                         text = if (isOperationActive) "Finalizar Jornada" else "Iniciar Jornada",
                         style = TextStyle(
                             fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.Bold,
                             color = if (isOperationActive) IosSystemRed else Color.White
                         )
                     )
