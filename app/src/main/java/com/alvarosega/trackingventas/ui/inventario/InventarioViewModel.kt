@@ -97,7 +97,8 @@ class InventarioViewModel @Inject constructor(
             try {
                 val dias = moduleConfigManager.getIntConfig("inventario_cliente", "dias_historial", 30)
                 val response = apiService.getHistorialProductosCliente(clienteId.toString(), dias)
-                if (response.isSuccessful && response.body()?.success == true) {
+                Log.d(TAG, "getHistorialProductosCliente HTTP Code: ${response.code()}")
+                if (response.isSuccessful && response.body() != null) {
                     val rawList = response.body()!!.productos ?: emptyList()
                     val sortedList = rawList.sortedWith(
                         compareByDescending<ProductoInventarioDto> {
@@ -110,7 +111,10 @@ class InventarioViewModel @Inject constructor(
                     )
                     _productosHistorial.value = sortedList
                     _stockMap.value = emptyMap()
+                    Log.d(TAG, "Productos de inventario cargados exitosamente para cliente #$clienteId: ${sortedList.size} productos")
                 } else {
+                    val err = response.errorBody()?.string()
+                    Log.e(TAG, "Error HTTP ${response.code()} cargando historial de productos para cliente #$clienteId: $err")
                     _productosHistorial.value = emptyList()
                     _statusMessage.value = "Sin productos comprados en los últimos días"
                 }

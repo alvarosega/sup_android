@@ -11,7 +11,7 @@ data class HistorialProductosResponseDto(
     @SerializedName("dias_historial") val diasHistorial: Int? = 30,
     @SerializedName("total_productos") val totalProductos: Int? = 0,
     @SerializedName("filtros") val filtros: FiltrosInventarioDto? = null,
-    @SerializedName(value = "productos", alternate = ["items"]) val productos: List<ProductoInventarioDto>? = emptyList()
+    @SerializedName(value = "productos", alternate = ["items", "data"]) val productos: List<ProductoInventarioDto>? = emptyList()
 )
 
 data class FiltrosInventarioDto(
