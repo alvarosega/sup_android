@@ -26,6 +26,11 @@ interface VisitaApiService {
         @Query("dia") dia: String? = null
     ): Response<List<PlanRuteoDto>>
 
+    @GET("api/fronteras/ruta")
+    suspend fun getFronteraRuta(
+        @Query("ruta") rutaOpcional: String? = null
+    ): Response<com.alvarosega.trackingventas.data.remote.dto.FronteraRutaDto>
+
     @GET("api/oportunidades")
     suspend fun getOportunidades(
         @Query("dia") dia: String? = null

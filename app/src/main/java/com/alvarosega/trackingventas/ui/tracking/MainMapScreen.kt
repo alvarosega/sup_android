@@ -100,6 +100,7 @@ fun MainMapScreen(
     val latestLocation by viewModel.latestLocation.collectAsState()
     val mapMode by viewModel.mapMode.collectAsState()
     val showUnvisited by viewModel.showUnvisited.collectAsState()
+    val routeBoundary by viewModel.routeBoundary.collectAsState()
     val activeDay by viewModel.activeDay.collectAsState()
     val isOperationActive by viewModel.isOperationActive.collectAsState()
     val allClients by viewModel.allClients.collectAsState()
@@ -260,9 +261,26 @@ fun MainMapScreen(
         selectedClient,
         showOpportunities,
         opportunities,
-        mapMode
+        mapMode,
+        routeBoundary
     ) {
         mapView.overlays.clear()
+
+        // Dibujo de Geocerca / Polígono de Frontera de Ruta
+        routeBoundary?.let { frontera ->
+            if (frontera.puntos.size >= 3) {
+                val boundaryPolygon = Polygon(mapView).apply {
+                    val geoPoints = frontera.puntos.map { GeoPoint(it.latitud, it.longitud) }
+                    points = geoPoints
+                    outlinePaint.color = 0xDC0071E3.toInt() // Borde azul brillante
+                    outlinePaint.strokeWidth = 5f
+                    fillPaint.color = 0x1E0071E3.toInt() // Relleno azul traslúcido suave
+                    infoWindow = null
+                    setOnClickListener { _, _, _ -> false }
+                }
+                mapView.overlays.add(boundaryPolygon)
+            }
+        }
 
         // Receptor de toque en fondo del mapa con amplio área táctil de 60m para tocar pines fácilmente
         val mapTouchOverlay = MapEventsOverlay(object : MapEventsReceiver {

@@ -107,10 +107,30 @@ class MainMapViewModel @Inject constructor(
     private val _isRefreshingGps = MutableStateFlow(false)
     val isRefreshingGps: StateFlow<Boolean> = _isRefreshingGps.asStateFlow()
 
+    private val _routeBoundary = MutableStateFlow<com.alvarosega.trackingventas.data.remote.dto.FronteraRutaDto?>(null)
+    val routeBoundary: StateFlow<com.alvarosega.trackingventas.data.remote.dto.FronteraRutaDto?> = _routeBoundary.asStateFlow()
+
+    fun fetchFronteraRuta(rutaOpcional: String? = null) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val targetRoute = rutaOpcional ?: sessionPreferences.activeRoute.value.ifBlank { null }
+                val response = visitaApiService.getFronteraRuta(targetRoute)
+                if (response.isSuccessful && response.body() != null) {
+                    val dto = response.body()!!
+                    _routeBoundary.value = dto
+                    Log.d("FRONTERA_DEBUG", "Frontera de ruta cargada con ${dto.puntos.size} puntos")
+                }
+            } catch (e: Exception) {
+                Log.e("FRONTERA_DEBUG", "Error consultando frontera de ruta", e)
+            }
+        }
+    }
+
     init {
         refreshAppModules()
         checkWorkdayStatus()
         syncPlanRuteo()
+        fetchFronteraRuta()
         forceRefreshGps()
     }
 
