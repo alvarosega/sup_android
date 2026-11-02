@@ -74,6 +74,10 @@ class RechazoSyncWorker @AssistedInject constructor(
                     builder.addFormDataPart("accuracy", String.format(java.util.Locale.US, "%.2f", acc))
                 }
 
+                item.tipoRechazo.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("tipo_rechazo", it) }
+                item.fechaRechazo.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("fecha_rechazo", it) }
+                item.itemsJson?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("items", it) }
+
                 builder.addFormDataPart("is_mock", if (item.isMockLocation) "1" else "0")
                 builder.addFormDataPart("is_mock_location", if (item.isMockLocation) "1" else "0")
 

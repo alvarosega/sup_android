@@ -394,7 +394,7 @@ fun PedidosRechazadosScreen(
                                                 .background(IosFillQuaternary)
                                                 .padding(8.dp)
                                         ) {
-                                            Text(item.productoNombre, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = IosLabelPrimary)
+                                            Text(item.productoNombre ?: "Producto", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = IosLabelPrimary)
                                             Text(
                                                 text = "Pedidas: ${item.cantidadPreventa} • Facturadas: ${item.cantidadFacturada ?: 0} • Rechazadas: ${item.cantidadRechazada ?: 0}",
                                                 fontSize = 11.sp,
@@ -638,7 +638,7 @@ fun PedidosRechazadosScreen(
                             verticalAlignment = Alignment.Top
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(editable.item.productoNombre, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Text(editable.item.productoNombre ?: "Producto", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                                 Text("Cód: ${editable.item.codigoProducto} • Precio: Bs. ${editable.item.precioUnitario}", fontSize = 12.sp, color = IosLabelSecondary)
                                 Text("Pedida: ${editable.item.cantidadPreventa} • Facturada: ${editable.item.cantidadFacturada ?: 0}", fontSize = 12.sp, color = IosSystemBlue, fontWeight = FontWeight.SemiBold)
                             }

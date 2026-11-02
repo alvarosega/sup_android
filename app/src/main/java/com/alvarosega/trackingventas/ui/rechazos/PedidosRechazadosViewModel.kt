@@ -290,7 +290,6 @@ class PedidosRechazadosViewModel @Inject constructor(
 
                 val itemsPayload = items.filter { it.cantidadRechazada > 0 }.map { editable ->
                     RechazoItemPayloadDto(
-                        preventaItemId = editable.item.preventaItemId,
                         productoId = editable.item.productoId,
                         codigoProducto = editable.item.codigoProducto ?: "",
                         productoNombre = editable.item.productoNombre ?: "Producto",
@@ -308,7 +307,7 @@ class PedidosRechazadosViewModel @Inject constructor(
                     uuid = uuid,
                     clienteId = preventa.clienteId,
                     clienteNombre = preventa.clienteNombre ?: "Cliente #${preventa.clienteId}",
-                    nroPreventa = preventa.nroPreventa,
+                    nroPreventa = preventa.nroPreventa.toString(),
                     fechaPreventa = preventa.fechaPreventa,
                     fechaRechazo = visitedAt,
                     motivo = motivoCodigo,

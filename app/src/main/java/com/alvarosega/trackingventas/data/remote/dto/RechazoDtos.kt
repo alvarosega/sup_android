@@ -3,7 +3,7 @@ package com.alvarosega.trackingventas.data.remote.dto
 import com.google.gson.annotations.SerializedName
 
 data class MotivosResponseDto(
-    @SerializedName("success") val success: Boolean,
+    @SerializedName("success") val success: Boolean = true,
     @SerializedName("motivos") val motivos: List<MotivoRechazoDto> = emptyList()
 )
 
@@ -14,50 +14,54 @@ data class MotivoRechazoDto(
 )
 
 data class PreventasPendientesResponseDto(
-    @SerializedName("success") val success: Boolean,
+    @SerializedName("success") val success: Boolean = true,
     @SerializedName("total") val total: Int = 0,
-    @SerializedName("data") val data: List<PreventaPendienteDto> = emptyList()
+    @SerializedName("filtros") val filtros: Map<String, Any>? = null,
+    @SerializedName(value = "data", alternate = ["preventas"]) val data: List<PreventaPendienteDto> = emptyList()
 )
 
 data class PreventaPendienteDto(
-    @SerializedName("nro_preventa") val nroPreventa: String,
-    @SerializedName("fecha_preventa") val fechaPreventa: String,
-    @SerializedName("cliente_id") val clienteId: String,
-    @SerializedName("codigo_cliente") val codigoCliente: String?,
-    @SerializedName("cliente_nombre") val clienteNombre: String?,
-    @SerializedName("ruta") val ruta: String?,
-    @SerializedName("vendedor") val vendedor: String?,
-    @SerializedName("tipo_sugerido") val tipoSugerido: String?, // "TOTAL" o "PARCIAL"
-    @SerializedName("monto_total_preventa") val montoTotalPreventa: Double?,
-    @SerializedName("monto_total_facturado") val montoTotalFacturado: Double?,
-    @SerializedName("monto_total_rechazado") val montoTotalRechazado: Double?,
-    @SerializedName("total_items_preventa") val totalItemsPreventa: Int?,
-    @SerializedName("total_items_facturados") val totalItemsFacturados: Int?,
-    @SerializedName("total_items_rechazados") val totalItemsRechazados: Int?,
+    @SerializedName(value = "nro_preventa", alternate = ["pre_venta_id", "nro_factura", "id"]) val nroPreventa: Long = 0L,
+    @SerializedName(value = "fecha_preventa", alternate = ["fecha", "created_at"]) val fechaPreventa: String? = "",
+    @SerializedName("dias_transcurridos") val diasTranscurridos: Int? = 0,
+    @SerializedName(value = "cliente_id", alternate = ["codigo_cliente"]) val clienteId: String = "",
+    @SerializedName("codigo_cliente") val codigoCliente: String? = "",
+    @SerializedName(value = "cliente_nombre", alternate = ["cliente", "razon_social"]) val clienteNombre: String? = "",
+    @SerializedName("ruta") val ruta: String? = "",
+    @SerializedName("vendedor") val vendedor: String? = "",
+    @SerializedName("tipo_sugerido") val tipoSugerido: String? = "TOTAL", // "TOTAL" o "PARCIAL"
+    @SerializedName("monto_total_preventa") val montoTotalPreventa: Double? = 0.0,
+    @SerializedName("monto_total_facturado") val montoTotalFacturado: Double? = 0.0,
+    @SerializedName("monto_total_rechazado") val montoTotalRechazado: Double? = 0.0,
+    @SerializedName("total_items_preventa") val totalItemsPreventa: Int? = 0,
+    @SerializedName("total_items_facturados") val totalItemsFacturados: Int? = 0,
+    @SerializedName("total_items_rechazados") val totalItemsRechazados: Int? = 0,
+    @SerializedName("fecha_facturada") val fechaFacturada: String? = null,
+    @SerializedName("nro_factura") val nroFactura: String? = null,
     @SerializedName("items_rechazados") val itemsRechazados: List<PreventaItemDto>? = emptyList(),
     @SerializedName("items") val items: List<PreventaItemDto>? = emptyList()
 )
 
 data class PreventaItemDto(
-    @SerializedName("preventa_item_id") val preventaItemId: Long,
-    @SerializedName("producto_id") val productoId: Long,
-    @SerializedName(value = "codigo_producto", alternate = ["codigo"]) val codigoProducto: String,
-    @SerializedName(value = "producto_nombre", alternate = ["producto"]) val productoNombre: String,
-    @SerializedName("categoria") val categoria: String?,
-    @SerializedName(value = "cantidad_preventa", alternate = ["cantidad"]) val cantidadPreventa: Int,
+    @SerializedName(value = "preventa_item_id", alternate = ["id", "item_id"]) val preventaItemId: Long = 0L,
+    @SerializedName(value = "producto_id", alternate = ["prod_id"]) val productoId: Long = 0L,
+    @SerializedName(value = "codigo_producto", alternate = ["codigo"]) val codigoProducto: String? = "",
+    @SerializedName(value = "producto_nombre", alternate = ["producto"]) val productoNombre: String? = "",
+    @SerializedName("categoria") val categoria: String? = "General",
+    @SerializedName(value = "cantidad_preventa", alternate = ["cantidad"]) val cantidadPreventa: Int = 0,
     @SerializedName("cantidad_facturada") val cantidadFacturada: Int? = 0,
     @SerializedName("cantidad_rechazada") val cantidadRechazada: Int? = 0,
-    @SerializedName("precio_unitario") val precioUnitario: Double,
-    @SerializedName("monto_preventa") val montoPreventa: Double?,
-    @SerializedName(value = "monto_facturado", alternate = ["monto_final"]) val montoFacturado: Double?,
-    @SerializedName("monto_rechazado") val montoRechazado: Double?,
+    @SerializedName(value = "precio_unitario", alternate = ["precio"]) val precioUnitario: Double = 0.0,
+    @SerializedName("monto_preventa") val montoPreventa: Double? = 0.0,
+    @SerializedName(value = "monto_facturado", alternate = ["monto_final"]) val montoFacturado: Double? = 0.0,
+    @SerializedName("monto_rechazado") val montoRechazado: Double? = 0.0,
     @SerializedName("es_parcial") val esParcial: Boolean? = false,
     @SerializedName("es_totalmente_rechazado") val esTotalmenteRechazado: Boolean? = false,
+    @SerializedName("fecha_facturada") val fechaFacturada: String? = null,
     @SerializedName("nro_factura") val nroFactura: String? = null
 )
 
 data class RechazoItemPayloadDto(
-    @SerializedName("preventa_item_id") val preventaItemId: Long,
     @SerializedName("producto_id") val productoId: Long,
     @SerializedName("codigo_producto") val codigoProducto: String,
     @SerializedName("producto_nombre") val productoNombre: String,
@@ -71,8 +75,9 @@ data class RechazoItemPayloadDto(
 data class PedidoRechazadoResponseDto(
     @SerializedName("id") val id: Long,
     @SerializedName("uuid") val uuid: String,
+    @SerializedName("nro_preventa") val nroPreventa: Long?,
     @SerializedName("cliente_id") val clienteId: String,
-    @SerializedName("cliente_nombre") val clienteNombre: String?,
+    @SerializedName(value = "cliente_nombre", alternate = ["cliente"]) val clienteNombre: String?,
     @SerializedName("vendedor") val vendedor: String?,
     @SerializedName("ruta") val ruta: String?,
     @SerializedName("motivo") val motivo: String,
@@ -80,7 +85,7 @@ data class PedidoRechazadoResponseDto(
     @SerializedName("total_items_rechazados") val totalItemsRechazados: Int?,
     @SerializedName("monto_total_rechazado") val montoTotalRechazado: Double?,
     @SerializedName("photo_url") val photoUrl: String?,
-    @SerializedName("created_at") val createdAt: String?,
+    @SerializedName(value = "fecha_rechazo", alternate = ["created_at"]) val fechaRechazo: String?,
     @SerializedName("items") val items: List<PedidoRechazadoItemResponseDto> = emptyList()
 )
 
@@ -93,7 +98,8 @@ data class PedidoRechazadoItemResponseDto(
 )
 
 data class HistorialResponseDto(
-    @SerializedName("fecha") val fecha: String?,
+    @SerializedName("success") val success: Boolean = true,
+    @SerializedName("fecha") val fecha: String? = null,
     @SerializedName("total") val total: Int = 0,
-    @SerializedName("rechazos") val rechazos: List<PedidoRechazadoResponseDto> = emptyList()
+    @SerializedName(value = "data", alternate = ["rechazos"]) val data: List<PedidoRechazadoResponseDto> = emptyList()
 )

@@ -89,7 +89,12 @@ interface VisitaApiService {
     @GET("api/pedidos-rechazados/preventas-pendientes")
     suspend fun getPreventasPendientes(
         @Query("cliente_id") clienteId: String? = null,
-        @Query("fecha") fecha: String? = null
+        @Query("dias") dias: Int? = null,
+        @Query("fecha_preventa") fechaPreventa: String? = null,
+        @Query("fecha_desde") fechaDesde: String? = null,
+        @Query("fecha_hasta") fechaHasta: String? = null,
+        @Query("ruta") ruta: String? = null,
+        @Query("incluir_hoy") incluirHoy: Boolean? = null
     ): Response<com.alvarosega.trackingventas.data.remote.dto.PreventasPendientesResponseDto>
 
     @Headers(
