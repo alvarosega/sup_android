@@ -284,28 +284,26 @@ fun VisitaRegistrationScreen(
                                                 .weight(1f)
                                                 .clickable { showHistoryDetail = !showHistoryDetail }
                                         ) {
+                                            val fechaUltima = prod.ultimaCompra?.fecha?.ifBlank { null }
+                                                ?: prod.historial?.firstOrNull()?.fecha?.ifBlank { null }
+                                                ?: "Sin compra reciente"
+
                                             Text(
                                                 text = prod.producto ?: "Producto",
                                                 style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary)
                                             )
                                             Spacer(modifier = Modifier.height(2.dp))
                                             Text(
-                                                text = "Cód: ${prod.codigo ?: "-"} • ${prod.categoria ?: "General"}",
-                                                style = TextStyle(fontSize = 12.sp, color = IosLabelSecondary)
+                                                text = "Última compra: $fechaUltima",
+                                                style = TextStyle(fontSize = 12.sp, color = IosLabelSecondary, fontWeight = FontWeight.Medium)
                                             )
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                            val historyCount = prod.historial?.size ?: 0
+                                            if (historyCount > 0) {
+                                                Spacer(modifier = Modifier.height(2.dp))
                                                 Text(
-                                                    text = "Total comprado: ${prod.totalComprado ?: 0} un.",
-                                                    style = TextStyle(fontSize = 12.sp, color = IosSystemBlue, fontWeight = FontWeight.Bold)
+                                                    text = if (showHistoryDetail) "▲ Ocultar historial" else "▼ Ver historial ($historyCount)",
+                                                    style = TextStyle(fontSize = 11.sp, color = IosSystemBlue, fontWeight = FontWeight.Bold)
                                                 )
-                                                val historyCount = prod.historial?.size ?: 0
-                                                if (historyCount > 0) {
-                                                    Spacer(modifier = Modifier.width(6.dp))
-                                                    Text(
-                                                        text = if (showHistoryDetail) "▲ Ocultar" else "▼ Ver $historyCount compras",
-                                                        style = TextStyle(fontSize = 11.sp, color = IosSystemBlue, fontWeight = FontWeight.Medium)
-                                                    )
-                                                }
                                             }
                                         }
 

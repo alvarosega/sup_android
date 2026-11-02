@@ -184,27 +184,19 @@ fun InventarioScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
+                                val fechaUltima = prod.ultimaCompra?.fecha?.ifBlank { null }
+                                    ?: prod.historial?.firstOrNull()?.fecha?.ifBlank { null }
+                                    ?: "Sin compra reciente"
+
                                 Text(
                                     text = prod.producto ?: "Producto",
                                     style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary)
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "Cód: ${prod.codigo ?: "-"} • ${prod.categoria ?: "General"}",
-                                    style = TextStyle(fontSize = 12.sp, color = IosLabelSecondary)
+                                    text = "Última compra: $fechaUltima",
+                                    style = TextStyle(fontSize = 12.sp, color = IosLabelSecondary, fontWeight = FontWeight.Medium)
                                 )
-                                val ult = prod.ultimaCompra
-                                if (ult != null && (ult.cantidad ?: 0) > 0) {
-                                    Text(
-                                        text = "Última compra: ${ult.cantidad} un. (${ult.fecha ?: "reciente"})",
-                                        style = TextStyle(fontSize = 11.sp, color = IosSystemBlue, fontWeight = FontWeight.Medium)
-                                    )
-                                } else if ((prod.totalComprado ?: 0) > 0) {
-                                    Text(
-                                        text = "Total histórico comprado: ${prod.totalComprado} un.",
-                                        style = TextStyle(fontSize = 11.sp, color = IosSystemBlue, fontWeight = FontWeight.Medium)
-                                    )
-                                }
                             }
 
                             // Stepper de Conteo de Stock Físico Independiente
