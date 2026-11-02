@@ -120,7 +120,8 @@ class PedidosRechazadosViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val response = apiService.getMotivosRechazo()
-                if (response.isSuccessful && response.body()?.success == true) {
+                Log.d(TAG, "getMotivosRechazo HTTP Code: ${response.code()}")
+                if (response.isSuccessful && response.body() != null) {
                     val list = response.body()!!.motivos
                     _motivosList.value = list
                     if (list.isNotEmpty()) {
@@ -165,21 +166,30 @@ class PedidosRechazadosViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             _isLoadingPreventas.value = true
             try {
-                val response = apiService.getPreventasPendientes(clienteId)
-                if (response.isSuccessful && response.body()?.success == true) {
-                    val list = response.body()!!.data
+                val response = apiService.getPreventasPendientes(clienteId = clienteId)
+                Log.d(TAG, "getPreventasPendientes HTTP Code: ${response.code()}")
+                if (response.isSuccessful && response.body() != null) {
+                    val body = response.body()!!
+                    val list = body.data
                     _preventasPendientes.value = list
-                    _pendingRechazosCount.value = response.body()!!.total
+                    _pendingRechazosCount.value = if (body.total > 0) body.total else list.size
+                    Log.d(TAG, "Preventas pendientes cargadas exitosamente: ${list.size} preventas (total ${body.total})")
                     if (list.isNotEmpty()) {
                         selectPreventa(list.first())
+                    } else {
+                        _selectedPreventa.value = null
+                        _itemsState.value = emptyList()
                     }
                 } else {
+                    val err = response.errorBody()?.string()
+                    Log.e(TAG, "Error HTTP ${response.code()} consultando preventas pendientes: $err")
                     _preventasPendientes.value = emptyList()
                     _pendingRechazosCount.value = 0
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error consultando preventas pendientes", e)
+                Log.e(TAG, "Excepción consultando preventas pendientes", e)
                 _preventasPendientes.value = emptyList()
+                _pendingRechazosCount.value = 0
             } finally {
                 _isLoadingPreventas.value = false
             }
