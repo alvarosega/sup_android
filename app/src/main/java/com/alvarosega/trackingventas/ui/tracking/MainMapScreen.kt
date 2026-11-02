@@ -238,7 +238,8 @@ fun MainMapScreen(
         filteredClients,
         selectedClient,
         showOpportunities,
-        opportunities
+        opportunities,
+        mapMode
     ) {
         mapView.overlays.clear()
 
