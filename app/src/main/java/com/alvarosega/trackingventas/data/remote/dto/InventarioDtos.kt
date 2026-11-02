@@ -17,6 +17,8 @@ data class InventarioProductoHistorialDto(
     @SerializedName(value = "codigo", alternate = ["codigo_producto"]) val codigo: String? = "",
     @SerializedName(value = "producto", alternate = ["producto_nombre"]) val producto: String? = "Producto",
     @SerializedName("categoria") val categoria: String? = "General",
+    @SerializedName("frecuencia_compra") val frecuenciaCompra: Int? = 0,
+    @SerializedName("monto_historico") val montoHistorico: Double? = 0.0,
     @SerializedName("total_comprado") val totalComprado: Int? = 0,
     @SerializedName("ultima_compra") val ultimaCompra: UltimaCompraDto? = null,
     @SerializedName("historial") val historial: List<HistorialItemDto>? = emptyList()

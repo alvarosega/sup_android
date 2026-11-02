@@ -139,9 +139,13 @@ class VisitaViewModel @Inject constructor(
                 if (response.isSuccessful && response.body()?.success == true) {
                     val rawList = response.body()!!.productos ?: emptyList()
                     val sortedList = rawList.sortedWith(
-                        compareByDescending<InventarioProductoHistorialDto> { it.totalComprado ?: 0 }
-                            .thenByDescending { it.historial?.size ?: 0 }
-                            .thenBy { it.producto ?: "" }
+                        compareByDescending<InventarioProductoHistorialDto> {
+                            (it.historial?.size ?: 0).coerceAtLeast(it.frecuenciaCompra ?: 0)
+                        }
+                        .thenByDescending {
+                            it.montoHistorico ?: (it.totalComprado ?: 0).toDouble()
+                        }
+                        .thenBy { it.producto ?: "" }
                     )
                     _productosHistorial.value = sortedList
                     _stockMap.value = emptyMap() // Por defecto es vacío/sin censar
