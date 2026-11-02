@@ -469,8 +469,9 @@ fun VisitaRegistrationScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // 3. SECCIÓN: CENSO DE STOCK / INVENTARIO EN PDV (CONDICIONAL - Solo si Atendido/Preventa)
-                if (selectedStatus == "PREVENTA" || selectedStatus == "ATENDIDO") {
+                // 3. SECCIÓN: CENSO DE STOCK / INVENTARIO EN PDV (CONDICIONAL - Preventa, Sin Dinero y Atendido)
+                val requiresStockCensus = selectedStatus == "PREVENTA" || selectedStatus == "SIN_DINERO" || selectedStatus == "ATENDIDO"
+                if (requiresStockCensus) {
                     if (isInventarioActive && productosHistorial.isNotEmpty()) {
                         Text(
                             text = "CENSO DE STOCK EN PDV (OPCIONAL)",
