@@ -12,23 +12,22 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-// PALETA OFICIAL APPLE PRO / iOS 18 LIQUID GLASSMORPHISM LUXURY
+// PALETA OFICIAL APPLE PRO / iOS 18 VIBRANT GLASSMORPHISM LUXURY
 object IosColors {
-    val BackgroundGrouped = Color(0xFFF1F5F9)
+    val BackgroundGrouped = Color(0xFFEFF3F8)
     val BackgroundMesh = Brush.verticalGradient(
         listOf(
-            Color(0xFFE2E8F0),
-            Color(0xFFEDF2F7),
-            Color(0xFFE2E8F0)
+            Color(0xFFE2EBF8),
+            Color(0xFFECE7FF),
+            Color(0xFFF1F5F9)
         )
     )
 
     val CardSurface = Color(0xFFFFFFFF)
-    val CardSurfaceGlass = Color(0xD9FFFFFF) // 85% Frosted Glass
+    val CardSurfaceGlass = Color(0xCCFFFFFF) // Translucidez cristal 80%
     val BorderSeparator = Color(0xFFE2E8F0)
-    val SpecularHighlight = Color(0x99FFFFFF)
 
-    // Accent System Colors (Vibrant Metallic)
+    // Accent System Colors (Vibrant)
     val SystemBlue = Color(0xFF007AFF)
     val SystemBlueDark = Color(0xFF0051A8)
     val SystemBlueLight = Color(0xFFEBF3FF)
@@ -64,38 +63,38 @@ object IosColors {
 
     val GlassCardGradient = Brush.verticalGradient(
         listOf(
-            Color(0xF0FFFFFF),
-            Color(0xD8F8FAFC)
+            Color(0xDCFFFFFF),
+            Color(0xC2F0F4FA)
         )
     )
 
     val GlassBorderGradient = Brush.verticalGradient(
         listOf(
-            Color(0x99FFFFFF),
-            Color(0x33007AFF)
+            Color(0xFFFFFFFF),
+            Color(0x4D007AFF)
         )
     )
 }
 
 object IosDimensions {
-    val CardCornerRadius = 22.dp
-    val DialogCornerRadius = 26.dp
+    val CardCornerRadius = 24.dp
+    val DialogCornerRadius = 28.dp
     val ButtonCornerRadius = 14.dp
     val BadgeCornerRadius = 10.dp
 }
 
 // Extensión para Tarjeta Liquid Glassmorphic Ultra-Premium
 fun Modifier.glassCard(
-    shape: Shape = RoundedCornerShape(22.dp),
-    elevation: Dp = 6.dp,
+    shape: Shape = RoundedCornerShape(24.dp),
+    elevation: Dp = 8.dp,
     borderGradient: Brush = IosColors.GlassBorderGradient
 ): Modifier = this
     .shadow(
         elevation = elevation,
         shape = shape,
-        ambientColor = Color(0x1A007AFF),
-        spotColor = Color(0x12000000)
+        ambientColor = Color(0x20007AFF),
+        spotColor = Color(0x18000000)
     )
     .clip(shape)
     .background(IosColors.GlassCardGradient)
-    .border(1.2.dp, borderGradient, shape)
+    .border(1.5.dp, borderGradient, shape)

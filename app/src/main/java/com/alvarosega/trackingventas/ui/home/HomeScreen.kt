@@ -343,7 +343,7 @@ fun HomeScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(IosBackgroundGrouped)
+            .background(IosColors.BackgroundMesh)
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
@@ -355,44 +355,48 @@ fun HomeScreen(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 1. Apple Top Navigation Header
+            // 1. Apple Top Navigation Header con Glass Badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(
-                        text = "PANEL PRINCIPAL",
-                        style = TextStyle(
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = IosLabelSecondary,
-                            letterSpacing = 0.8.sp
+                Box(
+                    modifier = Modifier
+                        .glassCard(shape = RoundedCornerShape(14.dp), elevation = 4.dp)
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(IosColors.SystemBlue, CircleShape)
                         )
-                    )
-                    Text(
-                        text = "TDB",
-                        style = TextStyle(
-                            fontSize = 32.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = IosLabelPrimary,
-                            letterSpacing = (-0.5).sp
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "TRACKING VENTAS",
+                            style = TextStyle(
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Black,
+                                color = IosColors.SystemBlue,
+                                letterSpacing = 1.sp
+                            )
                         )
-                    )
+                    }
                 }
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    // Botón Refrescar / Sincronizar Permisos y Datos Manualmente
+                    // Botón Refrescar / Sincronizar Permisos y Datos
                     Box(
                         modifier = Modifier
                             .size(42.dp)
+                            .shadow(3.dp, CircleShape)
                             .clip(CircleShape)
-                            .background(IosCardSurface)
-                            .border(0.8.dp, IosBorderSeparator, CircleShape)
+                            .background(IosCardSurface.copy(alpha = 0.9f))
+                            .border(1.dp, Color.White, CircleShape)
                             .clickable {
                                 viewModel.refreshAppModules()
                                 viewModel.syncPlanRuteo()
@@ -410,13 +414,14 @@ fun HomeScreen(
                         )
                     }
 
-                    // Botón Salir / Logout Estilo iOS Circle
+                    // Botón Salir / Logout
                     Box(
                         modifier = Modifier
                             .size(42.dp)
+                            .shadow(3.dp, CircleShape)
                             .clip(CircleShape)
-                            .background(IosCardSurface)
-                            .border(0.8.dp, IosBorderSeparator, CircleShape)
+                            .background(IosCardSurface.copy(alpha = 0.9f))
+                            .border(1.dp, Color.White, CircleShape)
                             .clickable { showLogoutDialog = true },
                         contentAlignment = Alignment.Center
                     ) {
@@ -432,49 +437,36 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 2. Dynamic Status Hero Card (Control de Jornada)
+            // 2. Dynamic Status Hero Card (Control de Jornada en Vidrio Esmerilado)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .glassCard(shape = RoundedCornerShape(22.dp), elevation = 4.dp)
-                    .padding(16.dp)
+                    .glassCard(shape = RoundedCornerShape(24.dp), elevation = 6.dp)
+                    .padding(18.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(9.dp)
-                                    .background(
-                                        if (isOperationActive) IosColors.SystemGreen else IosColors.SystemRed,
-                                        CircleShape
-                                    )
-                                    .border(2.dp, Color.White, CircleShape)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (isOperationActive) "JORNADA EN CURSO" else "JORNADA DETENIDA",
-                                style = TextStyle(
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isOperationActive) IosColors.SystemGreen else IosColors.SystemRed,
-                                    letterSpacing = 0.8.sp
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .background(
+                                    if (isOperationActive) IosColors.SystemGreen else IosColors.SystemRed,
+                                    CircleShape
                                 )
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
+                                .border(2.dp, Color.White, CircleShape)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (activeRoute.isNotBlank()) "Ruta: $activeRoute" else "Ruta: General Asignada",
+                            text = if (isOperationActive) "JORNADA EN CURSO" else "JORNADA DETENIDA",
                             style = TextStyle(
-                                fontSize = 17.sp,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = IosLabelPrimary
+                                color = if (isOperationActive) IosColors.SystemGreen else IosColors.SystemRed,
+                                letterSpacing = 0.8.sp
                             )
                         )
                     }
