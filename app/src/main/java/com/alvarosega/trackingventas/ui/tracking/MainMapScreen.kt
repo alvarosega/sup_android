@@ -173,6 +173,7 @@ fun MainMapScreen(
                 Lifecycle.Event.ON_RESUME -> {
                     mapView.onResume()
                     viewModel.forceRefreshGps()
+                    viewModel.syncPlanRuteo()
                 }
                 Lifecycle.Event.ON_PAUSE -> mapView.onPause()
                 else -> {}
@@ -181,6 +182,7 @@ fun MainMapScreen(
         lifecycleOwner.lifecycle.addObserver(observer)
         mapView.onResume()
         viewModel.forceRefreshGps()
+        viewModel.syncPlanRuteo()
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
             mapView.onPause()
@@ -1327,8 +1329,9 @@ private fun calculateConvexHull(points: List<GeoPoint>): List<GeoPoint> {
 }
 
 private fun isReferencialClient(client: PlanRuteoEntity): Boolean {
-    return client.status.equals("unvisited", ignoreCase = true) ||
-            client.status.equals("referencial", ignoreCase = true)
+    val statusClean = client.status.trim()
+    return statusClean.equals("unvisited", ignoreCase = true) ||
+            statusClean.equals("referencial", ignoreCase = true)
 }
 
 private fun getUserMarkerDrawable(context: Context): Drawable =
