@@ -266,20 +266,29 @@ fun MainMapScreen(
     ) {
         mapView.overlays.clear()
 
-        // Dibujo de Geocerca / Polígono de Frontera de Ruta
-        routeBoundary?.let { frontera ->
-            if (frontera.puntos.size >= 3) {
-                val boundaryPolygon = Polygon(mapView).apply {
-                    val geoPoints = frontera.puntos.map { GeoPoint(it.latitud, it.longitud) }
-                    points = geoPoints
-                    outlinePaint.color = 0xDC0071E3.toInt() // Borde azul brillante
-                    outlinePaint.strokeWidth = 5f
-                    fillPaint.color = 0x1E0071E3.toInt() // Relleno azul traslúcido suave
-                    infoWindow = null
-                    setOnClickListener { _, _, _ -> false }
-                }
-                mapView.overlays.add(boundaryPolygon)
+        // Dibujo de Geocerca / Polígono de Frontera de Ruta (Server o Cálculo Automático de Envolvente)
+        val serverPoints = routeBoundary?.puntos?.filter { it.latitud != 0.0 && it.longitud != 0.0 }?.map { GeoPoint(it.latitud, it.longitud) } ?: emptyList()
+        val polygonPoints = if (serverPoints.size >= 3) {
+            serverPoints
+        } else {
+            val clientPoints = filteredClients.filter { it.latitude != 0.0 && it.longitude != 0.0 }.map { GeoPoint(it.latitude, it.longitude) }
+            if (clientPoints.size >= 3) {
+                calculateConvexHull(clientPoints)
+            } else {
+                emptyList()
             }
+        }
+
+        if (polygonPoints.size >= 3) {
+            val boundaryPolygon = Polygon(mapView).apply {
+                points = polygonPoints
+                outlinePaint.color = 0xDC0071E3.toInt() // Borde azul brillante estilo Apple Pro
+                outlinePaint.strokeWidth = 5f
+                fillPaint.color = 0x1E0071E3.toInt() // Relleno azul traslúcido suave
+                infoWindow = null
+                setOnClickListener { _, _, _ -> false }
+            }
+            mapView.overlays.add(boundaryPolygon)
         }
 
         // Receptor de toque en fondo del mapa con amplio área táctil de 60m para tocar pines fácilmente
@@ -1285,6 +1294,36 @@ private object MarkerDrawableCache {
 
         return BitmapDrawable(context.resources, bitmap)
     }
+}
+
+private fun calculateConvexHull(points: List<GeoPoint>): List<GeoPoint> {
+    if (points.size < 3) return points
+    val sorted = points.distinctBy { Pair(it.latitude, it.longitude) }.sortedWith(compareBy({ it.latitude }, { it.longitude }))
+    if (sorted.size < 3) return sorted
+
+    fun crossProduct(o: GeoPoint, a: GeoPoint, b: GeoPoint): Double {
+        return (a.longitude - o.longitude) * (b.latitude - o.latitude) - (a.latitude - o.latitude) * (b.longitude - o.longitude)
+    }
+
+    val lower = mutableListOf<GeoPoint>()
+    for (p in sorted) {
+        while (lower.size >= 2 && crossProduct(lower[lower.size - 2], lower.last(), p) <= 0) {
+            lower.removeAt(lower.size - 1)
+        }
+        lower.add(p)
+    }
+
+    val upper = mutableListOf<GeoPoint>()
+    for (p in sorted.reversed()) {
+        while (upper.size >= 2 && crossProduct(upper[upper.size - 2], upper.last(), p) <= 0) {
+            upper.removeAt(upper.size - 1)
+        }
+        upper.add(p)
+    }
+
+    lower.removeAt(lower.size - 1)
+    upper.removeAt(upper.size - 1)
+    return lower + upper
 }
 
 private fun isReferencialClient(client: PlanRuteoEntity, activeDay: String): Boolean {
