@@ -5,8 +5,8 @@ import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 
 data class PlanRuteoDto(
-    @SerializedName("cliente_id") val clientId: Long,
-    @SerializedName("cliente") val clientName: String?,
+    @SerializedName(value = "cliente_id", alternate = ["id_cliente", "id"]) val clientId: Long,
+    @SerializedName(value = "cliente", alternate = ["nombre", "nombre_cliente", "razon_social"]) val clientName: String?,
     @SerializedName("ruta") val route: String?,
     @SerializedName("dia") val day: String?,
     @SerializedName("direccion") val address: String?,

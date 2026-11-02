@@ -21,6 +21,11 @@ interface VisitaApiService {
     @GET("api/plan-ruteo")
     suspend fun getPlanRuteo(): Response<List<PlanRuteoDto>>
 
+    @GET("api/visitas/clientes")
+    suspend fun getVisitasClientes(
+        @Query("dia") dia: String? = null
+    ): Response<List<PlanRuteoDto>>
+
     @GET("api/oportunidades")
     suspend fun getOportunidades(
         @Query("dia") dia: String? = null
