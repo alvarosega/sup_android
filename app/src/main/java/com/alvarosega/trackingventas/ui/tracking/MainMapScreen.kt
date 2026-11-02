@@ -1046,168 +1046,164 @@ fun MainMapScreen(
     }
 
 private object MarkerDrawableCache {
-    private var userMarker: Drawable? = null
-    private var opportunityMarker: Drawable? = null
-    private val storeMarkers = HashMap<String, Drawable>()
+    private var userBitmap: Bitmap? = null
+    private var opportunityBitmap: Bitmap? = null
+    private val storeBitmaps = HashMap<String, Bitmap>()
 
     fun getUserMarker(context: Context): Drawable {
-        val size = 72
-        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
+        val bitmap = userBitmap ?: run {
+            val size = 72
+            val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bmp)
 
-        // Resplandor externo cian translúcido
-        val haloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = 0x55007AFF
-            style = Paint.Style.FILL
+            // Resplandor externo cian translúcido
+            val haloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = 0x55007AFF
+                style = Paint.Style.FILL
+            }
+            canvas.drawCircle(size / 2f, size / 2f, size / 2f, haloPaint)
+
+            // Anillo blanco
+            val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = android.graphics.Color.WHITE
+                style = Paint.Style.FILL
+            }
+            canvas.drawCircle(size / 2f, size / 2f, 22f, borderPaint)
+
+            // Núcleo azul brillante de alta visibilidad
+            val corePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = 0xFF007AFF.toInt()
+                style = Paint.Style.FILL
+            }
+            canvas.drawCircle(size / 2f, size / 2f, 16f, corePaint)
+
+            // Punto blanco central de referencia
+            val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = android.graphics.Color.WHITE
+                style = Paint.Style.FILL
+            }
+            canvas.drawCircle(size / 2f, size / 2f, 5f, dotPaint)
+
+            userBitmap = bmp
+            bmp
         }
-        canvas.drawCircle(size / 2f, size / 2f, size / 2f, haloPaint)
-
-        // Anillo blanco
-        val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = android.graphics.Color.WHITE
-            style = Paint.Style.FILL
-        }
-        canvas.drawCircle(size / 2f, size / 2f, 22f, borderPaint)
-
-        // Núcleo azul brillante de alta visibilidad
-        val corePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = 0xFF007AFF.toInt()
-            style = Paint.Style.FILL
-        }
-        canvas.drawCircle(size / 2f, size / 2f, 16f, corePaint)
-
-        // Punto blanco central de referencia
-        val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = android.graphics.Color.WHITE
-            style = Paint.Style.FILL
-        }
-        canvas.drawCircle(size / 2f, size / 2f, 5f, dotPaint)
-
-        val drawable = BitmapDrawable(context.resources, bitmap)
-        userMarker = drawable
-        return drawable
+        return BitmapDrawable(context.resources, bitmap)
     }
 
     fun getStoreMarker(context: Context, status: StoreMarkerStatus, inRange: Boolean): Drawable {
         val key = "$status-$inRange"
-        storeMarkers[key]?.let { return it }
+        val bitmap = storeBitmaps[key] ?: run {
+            val width = 48
+            val height = 60
+            val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bmp)
 
-        val width = 48
-        val height = 60
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
+            val isBicolor = (status == StoreMarkerStatus.PENDING_SANEAMIENTO ||
+                    status == StoreMarkerStatus.VISITED_SANEAMIENTO ||
+                    status == StoreMarkerStatus.PENDING_REVIEW ||
+                    status == StoreMarkerStatus.VISITED_REVIEW)
 
-        val isBicolor = (status == StoreMarkerStatus.PENDING_SANEAMIENTO ||
-                status == StoreMarkerStatus.VISITED_SANEAMIENTO ||
-                status == StoreMarkerStatus.PENDING_REVIEW ||
-                status == StoreMarkerStatus.VISITED_REVIEW)
-
-        val leftColor = when (status) {
-            StoreMarkerStatus.REFERENCIAL -> 0xFF8E8E93.toInt() // Gris Referencial
-            StoreMarkerStatus.VISITED_OK, StoreMarkerStatus.VISITED_SANEAMIENTO, StoreMarkerStatus.VISITED_REVIEW -> 0xFF34C759.toInt() // Verde (Visitado)
-            else -> 0xFF007AFF.toInt() // Azul (No Visitado)
-        }
-
-        val rightColor = when (status) {
-            StoreMarkerStatus.REFERENCIAL -> 0xFF8E8E93.toInt() // Gris Referencial
-            StoreMarkerStatus.PENDING_SANEAMIENTO, StoreMarkerStatus.VISITED_SANEAMIENTO -> 0xFFFF9500.toInt() // Naranja (Datos Incorrectos)
-            StoreMarkerStatus.PENDING_REVIEW, StoreMarkerStatus.VISITED_REVIEW -> 0xFF5856D6.toInt() // Morado (Validación de Datos)
-            else -> leftColor // Unicolor
-        }
-
-        val path = android.graphics.Path().apply {
-            moveTo(width / 2f - 18f, 24f)
-            lineTo(width / 2f + 18f, 24f)
-            lineTo(width / 2f, height.toFloat())
-            close()
-        }
-
-        if (!isBicolor) {
-            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = leftColor
-                style = Paint.Style.FILL
-            }
-            canvas.drawCircle(width / 2f, 22f, 20f, paint)
-            canvas.drawPath(path, paint)
-        } else {
-            val paintLeft = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = leftColor
-                style = Paint.Style.FILL
-            }
-            val paintRight = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = rightColor
-                style = Paint.Style.FILL
+            val leftColor = when (status) {
+                StoreMarkerStatus.REFERENCIAL -> 0xFF8E8E93.toInt() // Gris Referencial
+                StoreMarkerStatus.VISITED_OK, StoreMarkerStatus.VISITED_SANEAMIENTO, StoreMarkerStatus.VISITED_REVIEW -> 0xFF34C759.toInt() // Verde (Visitado)
+                else -> 0xFF007AFF.toInt() // Azul (No Visitado)
             }
 
-            // Mitad Izquierda (Estado de Visita)
-            canvas.save()
-            canvas.clipRect(0f, 0f, width / 2f, height.toFloat())
-            canvas.drawCircle(width / 2f, 22f, 20f, paintLeft)
-            canvas.drawPath(path, paintLeft)
-            canvas.restore()
+            val rightColor = when (status) {
+                StoreMarkerStatus.REFERENCIAL -> 0xFF8E8E93.toInt() // Gris Referencial
+                StoreMarkerStatus.PENDING_SANEAMIENTO, StoreMarkerStatus.VISITED_SANEAMIENTO -> 0xFFFF9500.toInt() // Naranja (Datos Incorrectos)
+                StoreMarkerStatus.PENDING_REVIEW, StoreMarkerStatus.VISITED_REVIEW -> 0xFF5856D6.toInt() // Morado (Validación de Datos)
+                else -> leftColor // Unicolor
+            }
 
-            // Mitad Derecha (Naranja Saneamiento)
-            canvas.save()
-            canvas.clipRect(width / 2f, 0f, width.toFloat(), height.toFloat())
-            canvas.drawCircle(width / 2f, 22f, 20f, paintRight)
-            canvas.drawPath(path, paintRight)
-            canvas.restore()
+            val path = android.graphics.Path().apply {
+                moveTo(width / 2f - 18f, 24f)
+                lineTo(width / 2f + 18f, 24f)
+                lineTo(width / 2f, height.toFloat())
+                close()
+            }
+
+            if (!isBicolor) {
+                val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = leftColor
+                    style = Paint.Style.FILL
+                }
+                canvas.drawCircle(width / 2f, 22f, 20f, paint)
+                canvas.drawPath(path, paint)
+            } else {
+                val paintLeft = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = leftColor
+                    style = Paint.Style.FILL
+                }
+                val paintRight = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = rightColor
+                    style = Paint.Style.FILL
+                }
+
+                // Mitad Izquierda (Estado de Visita)
+                canvas.save()
+                canvas.clipRect(0f, 0f, width / 2f, height.toFloat())
+                canvas.drawCircle(width / 2f, 22f, 20f, paintLeft)
+                canvas.drawPath(path, paintLeft)
+                canvas.restore()
+
+                // Mitad Derecha (Naranja Saneamiento)
+                canvas.save()
+                canvas.clipRect(width / 2f, 0f, width.toFloat(), height.toFloat())
+                canvas.drawCircle(width / 2f, 22f, 20f, paintRight)
+                canvas.drawPath(path, paintRight)
+                canvas.restore()
+            }
+
+            // Círculo Central Blanco
+            val centerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = android.graphics.Color.WHITE
+                style = Paint.Style.FILL
+            }
+            canvas.drawCircle(width / 2f, 22f, 8f, centerPaint)
+
+            storeBitmaps[key] = bmp
+            bmp
         }
 
-        // Círculo Central Blanco
-        val centerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = android.graphics.Color.WHITE
-            style = Paint.Style.FILL
-        }
-        canvas.drawCircle(width / 2f, 22f, 8f, centerPaint)
-
-        val drawable = BitmapDrawable(context.resources, bitmap)
-        storeMarkers[key] = drawable
-        return drawable
+        return BitmapDrawable(context.resources, bitmap)
     }
 
     fun getOpportunityMarker(context: Context): Drawable {
-        opportunityMarker?.let { return it }
+        val bitmap = opportunityBitmap ?: run {
+            val width = 48
+            val height = 60
+            val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bmp)
 
-        val resId = context.resources.getIdentifier("ic_marker_opportunity", "drawable", context.packageName)
-        if (resId != 0) {
-            ContextCompat.getDrawable(context, resId)?.let {
-                opportunityMarker = it
-                return it
+            val pinColor = 0xFFFFCC00.toInt()
+
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = pinColor
+                style = Paint.Style.FILL
             }
+
+            canvas.drawCircle(width / 2f, 22f, 20f, paint)
+
+            val path = android.graphics.Path().apply {
+                moveTo(width / 2f - 18f, 24f)
+                lineTo(width / 2f + 18f, 24f)
+                lineTo(width / 2f, height.toFloat())
+                close()
+            }
+            canvas.drawPath(path, paint)
+
+            val centerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = android.graphics.Color.WHITE
+                style = Paint.Style.FILL
+            }
+            canvas.drawCircle(width / 2f, 22f, 8f, centerPaint)
+
+            opportunityBitmap = bmp
+            bmp
         }
 
-        val width = 48
-        val height = 60
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-
-        val pinColor = 0xFFFFCC00.toInt()
-
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = pinColor
-            style = Paint.Style.FILL
-        }
-
-        canvas.drawCircle(width / 2f, 22f, 20f, paint)
-
-        val path = android.graphics.Path().apply {
-            moveTo(width / 2f - 18f, 24f)
-            lineTo(width / 2f + 18f, 24f)
-            lineTo(width / 2f, height.toFloat())
-            close()
-        }
-        canvas.drawPath(path, paint)
-
-        val centerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = android.graphics.Color.WHITE
-            style = Paint.Style.FILL
-        }
-        canvas.drawCircle(width / 2f, 22f, 8f, centerPaint)
-
-        val drawable = BitmapDrawable(context.resources, bitmap)
-        opportunityMarker = drawable
-        return drawable
+        return BitmapDrawable(context.resources, bitmap)
     }
 }
 
