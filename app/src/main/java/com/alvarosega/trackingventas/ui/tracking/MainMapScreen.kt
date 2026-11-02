@@ -81,7 +81,8 @@ enum class StoreMarkerStatus {
     VISITED_REVIEW,
     PENDING_SANEAMIENTO,
     PENDING_REVIEW,
-    PENDING_OK
+    PENDING_OK,
+    REFERENCIAL
 }
 
 @Composable
@@ -306,9 +307,16 @@ fun MainMapScreen(
 
             // Jerarquía Bicolor de Estados (2 Dimensiones: Visita x Calidad de Datos)
             val isCensoMode = mapMode == MapMode.CENSO
+            val isReferencial = client.status.equals("unvisited", ignoreCase = true)
 
             val markerStatus = if (!isCensoMode) {
-                if (client.isVisited) StoreMarkerStatus.VISITED_OK else StoreMarkerStatus.PENDING_OK
+                if (isReferencial) {
+                    StoreMarkerStatus.REFERENCIAL
+                } else if (client.isVisited) {
+                    StoreMarkerStatus.VISITED_OK
+                } else {
+                    StoreMarkerStatus.PENDING_OK
+                }
             } else {
                 when {
                     client.isVisited && client.hasPendingReview -> StoreMarkerStatus.VISITED_REVIEW
@@ -624,8 +632,9 @@ fun MainMapScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                val isCensoMode = mapMode == MapMode.CENSO
                                 Text(
-                                    text = "LEYENDA PINES",
+                                    text = if (isCensoMode) "LEYENDA CENSO" else "LEYENDA VISITAS",
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = IosLabelSecondary,
@@ -643,68 +652,99 @@ fun MainMapScreen(
 
                             Spacer(modifier = Modifier.height(6.dp))
 
-                            // 1. Azul: no visitado
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(modifier = Modifier.size(10.dp).background(IosSystemBlue, CircleShape))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("no visitado", fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
-                            }
+                            val isCensoMode = mapMode == MapMode.CENSO
 
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            // 2. Bicolor Azul/Naranja: no visitado, datos incorrectos
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Row(modifier = Modifier.size(10.dp).clip(CircleShape)) {
-                                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemBlue))
-                                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemAmber))
+                            if (!isCensoMode) {
+                                // LEYENDA SIMPLIFICADA PARA MODO VISITAS
+                                // 1. Azul: no visitado
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(modifier = Modifier.size(10.dp).background(IosSystemBlue, CircleShape))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("no visitado", fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
                                 }
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("no visitado, datos incorrectos", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
-                            }
 
-                            Spacer(modifier = Modifier.height(4.dp))
+                                Spacer(modifier = Modifier.height(4.dp))
 
-                            // 3. Bicolor Azul/Morado: no visitado, validación de datos
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Row(modifier = Modifier.size(10.dp).clip(CircleShape)) {
-                                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemBlue))
-                                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemPurple))
+                                // 2. Verde: visitado
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(modifier = Modifier.size(10.dp).background(IosSystemGreen, CircleShape))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("visitado", fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
                                 }
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("no visitado, validación de datos", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
-                            }
 
-                            Spacer(modifier = Modifier.height(4.dp))
+                                Spacer(modifier = Modifier.height(4.dp))
 
-                            // 4. Bicolor Verde/Naranja: visitado, datos incorrectos
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Row(modifier = Modifier.size(10.dp).clip(CircleShape)) {
-                                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemGreen))
-                                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemAmber))
+                                // 3. Gris: referencial (otro día)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(modifier = Modifier.size(10.dp).background(IosLabelSecondary, CircleShape))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("referencial (otro día)", fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
                                 }
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("visitado, datos incorrectos", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
-                            }
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            // 5. Bicolor Verde/Morado: visitado, validación de datos
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Row(modifier = Modifier.size(10.dp).clip(CircleShape)) {
-                                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemGreen))
-                                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemPurple))
+                            } else {
+                                // LEYENDA COMPLETA BICOLOR PARA MODO CENSO / SANEAMIENTO
+                                // 1. Azul: no visitado
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(modifier = Modifier.size(10.dp).background(IosSystemBlue, CircleShape))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("no visitado", fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
                                 }
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("visitado, validación de datos", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
-                            }
 
-                            Spacer(modifier = Modifier.height(4.dp))
+                                Spacer(modifier = Modifier.height(4.dp))
 
-                            // 6. Verde: visitado, datos correctos
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(modifier = Modifier.size(10.dp).background(IosSystemGreen, CircleShape))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("visitado, datos correctos", fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
+                                // 2. Bicolor Azul/Naranja: no visitado, datos incorrectos
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Row(modifier = Modifier.size(10.dp).clip(CircleShape)) {
+                                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemBlue))
+                                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemAmber))
+                                    }
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("no visitado, datos incorrectos", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
+                                }
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                // 3. Bicolor Azul/Morado: no visitado, validación de datos
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Row(modifier = Modifier.size(10.dp).clip(CircleShape)) {
+                                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemBlue))
+                                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemPurple))
+                                    }
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("no visitado, validación de datos", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
+                                }
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                // 4. Bicolor Verde/Naranja: visitado, datos incorrectos
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Row(modifier = Modifier.size(10.dp).clip(CircleShape)) {
+                                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemGreen))
+                                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemAmber))
+                                    }
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("visitado, datos incorrectos", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
+                                }
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                // 5. Bicolor Verde/Morado: visitado, validación de datos
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Row(modifier = Modifier.size(10.dp).clip(CircleShape)) {
+                                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemGreen))
+                                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemPurple))
+                                    }
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("visitado, validación de datos", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
+                                }
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                // 6. Verde: visitado, datos correctos
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(modifier = Modifier.size(10.dp).background(IosSystemGreen, CircleShape))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("visitado, datos correctos", fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
+                                }
                             }
                         }
                     } else {
@@ -1062,11 +1102,13 @@ private object MarkerDrawableCache {
                 status == StoreMarkerStatus.VISITED_REVIEW)
 
         val leftColor = when (status) {
+            StoreMarkerStatus.REFERENCIAL -> 0xFF8E8E93.toInt() // Gris Referencial
             StoreMarkerStatus.VISITED_OK, StoreMarkerStatus.VISITED_SANEAMIENTO, StoreMarkerStatus.VISITED_REVIEW -> 0xFF34C759.toInt() // Verde (Visitado)
             else -> 0xFF007AFF.toInt() // Azul (No Visitado)
         }
 
         val rightColor = when (status) {
+            StoreMarkerStatus.REFERENCIAL -> 0xFF8E8E93.toInt() // Gris Referencial
             StoreMarkerStatus.PENDING_SANEAMIENTO, StoreMarkerStatus.VISITED_SANEAMIENTO -> 0xFFFF9500.toInt() // Naranja (Datos Incorrectos)
             StoreMarkerStatus.PENDING_REVIEW, StoreMarkerStatus.VISITED_REVIEW -> 0xFF5856D6.toInt() // Morado (Validación de Datos)
             else -> leftColor // Unicolor
