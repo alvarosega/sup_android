@@ -162,12 +162,24 @@ class PedidosRechazadosViewModel @Inject constructor(
         }
     }
 
-    fun fetchPreventasPendientes(clienteId: String? = null) {
+    fun fetchPreventasPendientes(
+        clienteId: String? = null,
+        dias: Int = 30,
+        incluirHoy: Boolean = true,
+        nroPreventa: Long? = null,
+        incluirJustificados: Boolean? = null
+    ) {
         viewModelScope.launch(Dispatchers.IO) {
             _isLoadingPreventas.value = true
             try {
-                val response = apiService.getPreventasPendientes(clienteId = clienteId)
-                Log.d(TAG, "getPreventasPendientes HTTP Code: ${response.code()}")
+                val response = apiService.getPreventasPendientes(
+                    clienteId = clienteId,
+                    dias = dias,
+                    incluirHoy = incluirHoy,
+                    nroPreventa = nroPreventa,
+                    incluirJustificados = incluirJustificados
+                )
+                Log.d(TAG, "getPreventasPendientes (dias=$dias, incluirHoy=$incluirHoy) HTTP Code: ${response.code()}")
                 if (response.isSuccessful && response.body() != null) {
                     val body = response.body()!!
                     val list = body.data

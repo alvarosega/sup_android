@@ -94,7 +94,9 @@ interface VisitaApiService {
         @Query("fecha_desde") fechaDesde: String? = null,
         @Query("fecha_hasta") fechaHasta: String? = null,
         @Query("ruta") ruta: String? = null,
-        @Query("incluir_hoy") incluirHoy: Boolean? = null
+        @Query("incluir_hoy") incluirHoy: Boolean? = null,
+        @Query("nro_preventa") nroPreventa: Long? = null,
+        @Query("incluir_justificados") incluirJustificados: Boolean? = null
     ): Response<com.alvarosega.trackingventas.data.remote.dto.PreventasPendientesResponseDto>
 
     @Headers(
