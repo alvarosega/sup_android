@@ -107,11 +107,17 @@ fun VisitaRegistrationScreen(
         }
     }
 
+    var lastClientId by remember { mutableStateOf<Long?>(null) }
+
     LaunchedEffect(selectedClient?.clientId) {
-        selectedStatus = null
-        comments = ""
-        isSaving = false
-        selectedClient?.clientId?.let { viewModel.fetchHistorialProductos(it) }
+        val newId = selectedClient?.clientId
+        if (newId != null && newId != lastClientId) {
+            lastClientId = newId
+            selectedStatus = null
+            comments = ""
+            isSaving = false
+            viewModel.fetchHistorialProductos(newId)
+        }
     }
 
     val statusOptions = listOf("PREVENTA", "SIN_DINERO", "TIENDA_CERRADA", "AUSENTE")
@@ -254,7 +260,9 @@ fun VisitaRegistrationScreen(
                     }
 
                     is ProximityUiState.SingleClientMatch -> {
-                        selectedClient = state.client
+                        if (selectedClient?.clientId != state.client.clientId) {
+                            selectedClient = state.client
+                        }
                         val isFarFromPoint = state.distance > 150.0f
 
                         Column(
