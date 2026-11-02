@@ -27,7 +27,7 @@ data class PreventaPendienteDto(
     @SerializedName("dias_transcurridos") val diasTranscurridos: Int? = 0,
     @SerializedName(value = "cliente_id", alternate = ["id_cliente"]) val clienteId: String = "",
     @SerializedName("codigo_cliente") val codigoCliente: String? = "",
-    @SerializedName(value = "cliente_nombre", alternate = ["cliente", "razon_social"]) val clienteNombre: String? = "",
+    @SerializedName(value = "cliente_nombre", alternate = ["razon_social"]) val clienteNombre: String? = "",
     @SerializedName("cliente") val cliente: String? = null,
     @SerializedName("ruta") val ruta: String? = "",
     @SerializedName("vendedor") val vendedor: String? = "",
