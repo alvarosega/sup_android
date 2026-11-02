@@ -97,6 +97,7 @@ fun MainMapScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
 
     val latestLocation by viewModel.latestLocation.collectAsState()
+    val mapMode by viewModel.mapMode.collectAsState()
     val isOperationActive by viewModel.isOperationActive.collectAsState()
     val allClients by viewModel.allClients.collectAsState()
     val filteredClients by viewModel.filteredClients.collectAsState()
@@ -304,13 +305,19 @@ fun MainMapScreen(
             } else Float.MAX_VALUE
 
             // Jerarquía Bicolor de Estados (2 Dimensiones: Visita x Calidad de Datos)
-            val markerStatus = when {
-                client.isVisited && client.hasPendingReview -> StoreMarkerStatus.VISITED_REVIEW
-                client.isVisited && client.requiereCorreccion() -> StoreMarkerStatus.VISITED_SANEAMIENTO
-                client.isVisited -> StoreMarkerStatus.VISITED_OK
-                client.hasPendingReview -> StoreMarkerStatus.PENDING_REVIEW
-                client.requiereCorreccion() -> StoreMarkerStatus.PENDING_SANEAMIENTO
-                else -> StoreMarkerStatus.PENDING_OK
+            val isCensoMode = mapMode == MapMode.CENSO
+
+            val markerStatus = if (!isCensoMode) {
+                if (client.isVisited) StoreMarkerStatus.VISITED_OK else StoreMarkerStatus.PENDING_OK
+            } else {
+                when {
+                    client.isVisited && client.hasPendingReview -> StoreMarkerStatus.VISITED_REVIEW
+                    client.isVisited && client.requiereCorreccion() -> StoreMarkerStatus.VISITED_SANEAMIENTO
+                    client.isVisited -> StoreMarkerStatus.VISITED_OK
+                    client.hasPendingReview -> StoreMarkerStatus.PENDING_REVIEW
+                    client.requiereCorreccion() -> StoreMarkerStatus.PENDING_SANEAMIENTO
+                    else -> StoreMarkerStatus.PENDING_OK
+                }
             }
 
             val marker = Marker(mapView).apply {
@@ -461,6 +468,60 @@ fun MainMapScreen(
                                 modifier = Modifier.size(20.dp)
                             )
                         }
+                    }
+                }
+
+                // Switch de Modo: Visitas vs Censo / Saneamiento
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 2.dp)
+                        .height(30.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(IosFillQuaternary)
+                        .padding(2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    val isVisitasMode = mapMode == MapMode.VISITAS
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .shadow(if (isVisitasMode) 1.dp else 0.dp, RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (isVisitasMode) IosCardSurface else Color.Transparent)
+                            .clickable { viewModel.setMapMode(MapMode.VISITAS) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Modo Visitas",
+                            style = TextStyle(
+                                fontSize = 11.sp,
+                                fontWeight = if (isVisitasMode) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isVisitasMode) IosSystemBlue else IosLabelSecondary
+                            )
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .shadow(if (!isVisitasMode) 1.dp else 0.dp, RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (!isVisitasMode) IosCardSurface else Color.Transparent)
+                            .clickable { viewModel.setMapMode(MapMode.CENSO) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Modo Censo / Saneamiento",
+                            style = TextStyle(
+                                fontSize = 11.sp,
+                                fontWeight = if (!isVisitasMode) FontWeight.Bold else FontWeight.Normal,
+                                color = if (!isVisitasMode) IosSystemPurple else IosLabelSecondary
+                            )
+                        )
                     }
                 }
 
@@ -792,12 +853,17 @@ fun MainMapScreen(
 
                         val isInRange = (distToClient ?: Float.MAX_VALUE.toDouble()) <= PROXIMITY_RADIUS_METERS.toDouble()
                         val necesitaCorreccion = client.requiereCorreccion()
+                        val isCensoMode = mapMode == MapMode.CENSO
 
-                        val cardBorderColor = when {
-                            client.isVisited -> IosSystemGreen
-                            client.hasPendingReview -> IosSystemPurple
-                            necesitaCorreccion || client.requiereSaneamiento -> IosSystemAmber
-                            else -> IosSystemBlue
+                        val cardBorderColor = if (!isCensoMode) {
+                            if (client.isVisited) IosSystemGreen else IosSystemBlue
+                        } else {
+                            when {
+                                client.isVisited -> IosSystemGreen
+                                client.hasPendingReview -> IosSystemPurple
+                                necesitaCorreccion || client.requiereSaneamiento -> IosSystemAmber
+                                else -> IosSystemBlue
+                            }
                         }
 
                         Column(
@@ -825,17 +891,19 @@ fun MainMapScreen(
                                     val buttonBg = if (isSaneamientoRequerido) Color(0xFFFFEBEA).copy(alpha = pulseAlpha) else IosFillQuaternary
                                     val iconTint = if (isSaneamientoRequerido) IosSystemRed else IosSystemBlue
 
-                                    // Botón Lápiz de Edición con Parpadeo Rojo
-                                    Box(
-                                        modifier = Modifier
-                                            .size(32.dp)
-                                            .clip(CircleShape)
-                                            .background(buttonBg)
-                                            .border(if (isSaneamientoRequerido) 1.5.dp else 0.dp, IosSystemRed.copy(alpha = pulseAlpha), CircleShape)
+                                    if (isCensoMode) {
+                                        // Botón Lápiz de Edición solo visible en Modo Censo
+                                        Box(
+                                            modifier = Modifier
+                                                .size(32.dp)
+                                                .clip(CircleShape)
+                                                .background(buttonBg)
+                                                .border(if (isSaneamientoRequerido) 1.5.dp else 0.dp, IosSystemRed.copy(alpha = pulseAlpha), CircleShape)
                                             .clickable { onNavigateToEditarCliente(client) },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = iconTint, modifier = Modifier.size(16.dp))
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(Icons.Default.Edit, contentDescription = "Editar", tint = iconTint, modifier = Modifier.size(16.dp))
+                                        }
                                     }
                                 }
                             }
@@ -859,9 +927,9 @@ fun MainMapScreen(
                                 )
                             }
 
-                            // Caja de Alerta de Saneamiento si requiere corrección
+                            // Caja de Alerta de Saneamiento solo en Modo Censo
                             val isSaneamientoRequerido = necesitaCorreccion || client.requiereSaneamiento || client.saneamientoObligatorio
-                            if (isSaneamientoRequerido) {
+                            if (isCensoMode && isSaneamientoRequerido) {
                                 val alertas = client.getSaneamientoAlertas()
                                 val alertaTexto = if (alertas.isNotEmpty()) alertas.joinToString(" • ") else "Datos incompletos o pendientes de corrección."
                                 Spacer(modifier = Modifier.height(8.dp))

@@ -31,6 +31,10 @@ enum class MapFilterType {
     TODOS, PENDIENTES, VISITADOS
 }
 
+enum class MapMode {
+    VISITAS, CENSO
+}
+
 data class LocationPoint(
     val latitude: Double,
     val longitude: Double,
@@ -60,6 +64,13 @@ class MainMapViewModel @Inject constructor(
 
     private val _selectedFilter = MutableStateFlow(MapFilterType.TODOS)
     val selectedFilter: StateFlow<MapFilterType> = _selectedFilter.asStateFlow()
+
+    private val _mapMode = MutableStateFlow(MapMode.VISITAS)
+    val mapMode: StateFlow<MapMode> = _mapMode.asStateFlow()
+
+    fun setMapMode(mode: MapMode) {
+        _mapMode.value = mode
+    }
 
     val allClients: StateFlow<List<PlanRuteoEntity>> = planRuteoDao.getPendingClientsByDay()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
