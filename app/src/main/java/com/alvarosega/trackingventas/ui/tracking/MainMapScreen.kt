@@ -112,12 +112,12 @@ fun MainMapScreen(
     val opportunities by viewModel.opportunities.collectAsState()
     val isLoadingOpportunities by viewModel.isLoadingOpportunities.collectAsState()
 
-    val baseClientsForMap = remember(allClients, mapMode, showUnvisited) {
+    val baseClientsForMap = remember(allClients, mapMode, showUnvisited, activeDay) {
         if (mapMode == MapMode.VISITAS) {
             if (showUnvisited) {
                 allClients
             } else {
-                allClients.filter { !isReferencialClient(it) }
+                allClients.filter { !isReferencialClient(it, activeDay) }
             }
         } else {
             allClients
@@ -358,7 +358,7 @@ fun MainMapScreen(
 
             // Jerarquía Bicolor de Estados (2 Dimensiones: Visita x Calidad de Datos)
             val isCensoMode = mapMode == MapMode.CENSO
-            val isReferencial = isReferencialClient(client)
+            val isReferencial = isReferencialClient(client, activeDay)
 
             val markerStatus = if (!isCensoMode) {
                 if (isReferencial) {
@@ -587,7 +587,7 @@ fun MainMapScreen(
                 // Segmented Control de Filtro Integrado en Cabecera
                 val isVisitasMode = mapMode == MapMode.VISITAS
                 val baseClientsForCounts = if (isVisitasMode) {
-                    allClients.filter { !isReferencialClient(it) }
+                    allClients.filter { !isReferencialClient(it, activeDay) }
                 } else {
                     allClients
                 }
@@ -1328,10 +1328,12 @@ private fun calculateConvexHull(points: List<GeoPoint>): List<GeoPoint> {
     return lower + upper
 }
 
-private fun isReferencialClient(client: PlanRuteoEntity): Boolean {
+private fun isReferencialClient(client: PlanRuteoEntity, activeDay: String): Boolean {
+    val dayStr = activeDay.ifBlank { "Lunes" }
     val statusClean = client.status.trim()
     return statusClean.equals("unvisited", ignoreCase = true) ||
-            statusClean.equals("referencial", ignoreCase = true)
+            statusClean.equals("referencial", ignoreCase = true) ||
+            (!client.day.isBlank() && !client.day.equals(dayStr, ignoreCase = true))
 }
 
 private fun getUserMarkerDrawable(context: Context): Drawable =
