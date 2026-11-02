@@ -12,7 +12,7 @@ data class PlanRuteoDto(
     @SerializedName("direccion") val address: String?,
     @SerializedName("latitud") val latitude: Double?,
     @SerializedName("longitud") val longitude: Double?,
-    @SerializedName("estado") val status: String?,
+    @SerializedName(value = "status", alternate = ["estado", "status_visita"]) val status: String?,
 
     // Columnas adicionales para saneamiento y calidad
     @SerializedName("is_visited") val isVisited: Boolean? = null,
