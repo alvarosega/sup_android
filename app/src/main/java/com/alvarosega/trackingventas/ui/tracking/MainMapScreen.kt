@@ -99,6 +99,7 @@ fun MainMapScreen(
 
     val latestLocation by viewModel.latestLocation.collectAsState()
     val mapMode by viewModel.mapMode.collectAsState()
+    val activeDay by viewModel.activeDay.collectAsState()
     val isOperationActive by viewModel.isOperationActive.collectAsState()
     val allClients by viewModel.allClients.collectAsState()
     val filteredClients by viewModel.filteredClients.collectAsState()
@@ -308,7 +309,11 @@ fun MainMapScreen(
 
             // Jerarquía Bicolor de Estados (2 Dimensiones: Visita x Calidad de Datos)
             val isCensoMode = mapMode == MapMode.CENSO
-            val isReferencial = client.status.equals("unvisited", ignoreCase = true)
+            val currentDay = activeDay.ifBlank { "Lunes" }
+
+            val isReferencial = client.status.equals("unvisited", ignoreCase = true) ||
+                    client.status.equals("referencial", ignoreCase = true) ||
+                    (!client.day.isBlank() && !client.day.equals(currentDay, ignoreCase = true))
 
             val markerStatus = if (!isCensoMode) {
                 if (isReferencial) {
@@ -1093,77 +1098,105 @@ private object MarkerDrawableCache {
     fun getStoreMarker(context: Context, status: StoreMarkerStatus, inRange: Boolean): Drawable {
         val key = "$status-$inRange"
         val bitmap = storeBitmaps[key] ?: run {
-            val width = 48
-            val height = 60
-            val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bmp)
+            if (status == StoreMarkerStatus.REFERENCIAL) {
+                val size = 32
+                val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+                val canvas = Canvas(bmp)
 
-            val isBicolor = (status == StoreMarkerStatus.PENDING_SANEAMIENTO ||
-                    status == StoreMarkerStatus.VISITED_SANEAMIENTO ||
-                    status == StoreMarkerStatus.PENDING_REVIEW ||
-                    status == StoreMarkerStatus.VISITED_REVIEW)
-
-            val leftColor = when (status) {
-                StoreMarkerStatus.REFERENCIAL -> 0xFF8E8E93.toInt() // Gris Referencial
-                StoreMarkerStatus.VISITED_OK, StoreMarkerStatus.VISITED_SANEAMIENTO, StoreMarkerStatus.VISITED_REVIEW -> 0xFF34C759.toInt() // Verde (Visitado)
-                else -> 0xFF007AFF.toInt() // Azul (No Visitado)
-            }
-
-            val rightColor = when (status) {
-                StoreMarkerStatus.REFERENCIAL -> 0xFF8E8E93.toInt() // Gris Referencial
-                StoreMarkerStatus.PENDING_SANEAMIENTO, StoreMarkerStatus.VISITED_SANEAMIENTO -> 0xFFFF9500.toInt() // Naranja (Datos Incorrectos)
-                StoreMarkerStatus.PENDING_REVIEW, StoreMarkerStatus.VISITED_REVIEW -> 0xFF5856D6.toInt() // Morado (Validación de Datos)
-                else -> leftColor // Unicolor
-            }
-
-            val path = android.graphics.Path().apply {
-                moveTo(width / 2f - 18f, 24f)
-                lineTo(width / 2f + 18f, 24f)
-                lineTo(width / 2f, height.toFloat())
-                close()
-            }
-
-            if (!isBicolor) {
-                val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    color = leftColor
+                // Borde exterior gris
+                val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = 0xFF6E6E73.toInt()
                     style = Paint.Style.FILL
                 }
-                canvas.drawCircle(width / 2f, 22f, 20f, paint)
-                canvas.drawPath(path, paint)
+                canvas.drawCircle(size / 2f, size / 2f, 10f, borderPaint)
+
+                // Relleno gris neutro
+                val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = 0xFF8E8E93.toInt()
+                    style = Paint.Style.FILL
+                }
+                canvas.drawCircle(size / 2f, size / 2f, 8f, fillPaint)
+
+                // Punto blanco central
+                val centerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = android.graphics.Color.WHITE
+                    style = Paint.Style.FILL
+                }
+                canvas.drawCircle(size / 2f, size / 2f, 3.5f, centerPaint)
+
+                storeBitmaps[key] = bmp
+                bmp
             } else {
-                val paintLeft = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    color = leftColor
+                val width = 48
+                val height = 60
+                val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                val canvas = Canvas(bmp)
+
+                val isBicolor = (status == StoreMarkerStatus.PENDING_SANEAMIENTO ||
+                        status == StoreMarkerStatus.VISITED_SANEAMIENTO ||
+                        status == StoreMarkerStatus.PENDING_REVIEW ||
+                        status == StoreMarkerStatus.VISITED_REVIEW)
+
+                val leftColor = when (status) {
+                    StoreMarkerStatus.VISITED_OK, StoreMarkerStatus.VISITED_SANEAMIENTO, StoreMarkerStatus.VISITED_REVIEW -> 0xFF34C759.toInt() // Verde (Visitado)
+                    else -> 0xFF007AFF.toInt() // Azul (No Visitado)
+                }
+
+                val rightColor = when (status) {
+                    StoreMarkerStatus.PENDING_SANEAMIENTO, StoreMarkerStatus.VISITED_SANEAMIENTO -> 0xFFFF9500.toInt() // Naranja (Datos Incorrectos)
+                    StoreMarkerStatus.PENDING_REVIEW, StoreMarkerStatus.VISITED_REVIEW -> 0xFF5856D6.toInt() // Morado (Validación de Datos)
+                    else -> leftColor // Unicolor
+                }
+
+                val path = android.graphics.Path().apply {
+                    moveTo(width / 2f - 18f, 24f)
+                    lineTo(width / 2f + 18f, 24f)
+                    lineTo(width / 2f, height.toFloat())
+                    close()
+                }
+
+                if (!isBicolor) {
+                    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = leftColor
+                        style = Paint.Style.FILL
+                    }
+                    canvas.drawCircle(width / 2f, 22f, 20f, paint)
+                    canvas.drawPath(path, paint)
+                } else {
+                    val paintLeft = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = leftColor
+                        style = Paint.Style.FILL
+                    }
+                    val paintRight = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = rightColor
+                        style = Paint.Style.FILL
+                    }
+
+                    // Mitad Izquierda (Estado de Visita)
+                    canvas.save()
+                    canvas.clipRect(0f, 0f, width / 2f, height.toFloat())
+                    canvas.drawCircle(width / 2f, 22f, 20f, paintLeft)
+                    canvas.drawPath(path, paintLeft)
+                    canvas.restore()
+
+                    // Mitad Derecha (Naranja Saneamiento)
+                    canvas.save()
+                    canvas.clipRect(width / 2f, 0f, width.toFloat(), height.toFloat())
+                    canvas.drawCircle(width / 2f, 22f, 20f, paintRight)
+                    canvas.drawPath(path, paintRight)
+                    canvas.restore()
+                }
+
+                // Círculo Central Blanco
+                val centerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = android.graphics.Color.WHITE
                     style = Paint.Style.FILL
                 }
-                val paintRight = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    color = rightColor
-                    style = Paint.Style.FILL
-                }
+                canvas.drawCircle(width / 2f, 22f, 8f, centerPaint)
 
-                // Mitad Izquierda (Estado de Visita)
-                canvas.save()
-                canvas.clipRect(0f, 0f, width / 2f, height.toFloat())
-                canvas.drawCircle(width / 2f, 22f, 20f, paintLeft)
-                canvas.drawPath(path, paintLeft)
-                canvas.restore()
-
-                // Mitad Derecha (Naranja Saneamiento)
-                canvas.save()
-                canvas.clipRect(width / 2f, 0f, width.toFloat(), height.toFloat())
-                canvas.drawCircle(width / 2f, 22f, 20f, paintRight)
-                canvas.drawPath(path, paintRight)
-                canvas.restore()
+                storeBitmaps[key] = bmp
+                bmp
             }
-
-            // Círculo Central Blanco
-            val centerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = android.graphics.Color.WHITE
-                style = Paint.Style.FILL
-            }
-            canvas.drawCircle(width / 2f, 22f, 8f, centerPaint)
-
-            storeBitmaps[key] = bmp
-            bmp
         }
 
         return BitmapDrawable(context.resources, bitmap)

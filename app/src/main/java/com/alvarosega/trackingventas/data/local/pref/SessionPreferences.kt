@@ -20,6 +20,9 @@ class SessionPreferences @Inject constructor(
     private val _activeRoute = MutableStateFlow(getActiveRouteDirect())
     val activeRoute: StateFlow<String> = _activeRoute.asStateFlow()
 
+    private val _activeDay = MutableStateFlow("Lunes")
+    val activeDay: StateFlow<String> = _activeDay.asStateFlow()
+
     fun isOperationActiveDirect(): Boolean {
         return prefs.getBoolean(KEY_OPERATION_ACTIVE, false)
     }
