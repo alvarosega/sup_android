@@ -1327,10 +1327,8 @@ private fun calculateConvexHull(points: List<GeoPoint>): List<GeoPoint> {
 }
 
 private fun isReferencialClient(client: PlanRuteoEntity, activeDay: String): Boolean {
-    val dayStr = activeDay.ifBlank { "Lunes" }
     return client.status.equals("unvisited", ignoreCase = true) ||
-            client.status.equals("referencial", ignoreCase = true) ||
-            (!client.day.isBlank() && !client.day.equals(dayStr, ignoreCase = true))
+            client.status.equals("referencial", ignoreCase = true)
 }
 
 private fun getUserMarkerDrawable(context: Context): Drawable =
