@@ -48,6 +48,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.alvarosega.trackingventas.data.local.entity.PlanRuteoEntity
 import com.alvarosega.trackingventas.data.remote.dto.ProductoInventarioDto
+import com.alvarosega.trackingventas.ui.camera.VisitaCameraPreview
 
 private data class EventoTimelineData(
     val fecha: String,
@@ -99,6 +100,7 @@ fun VisitaRegistrationScreen(
     var selectedClient by remember { mutableStateOf<PlanRuteoEntity?>(null) }
     var comments by remember { mutableStateOf("") }
     var isSaving by remember { mutableStateOf(false) }
+    var showCameraPreview by remember { mutableStateOf(false) }
 
     // Evaluación automática de proximidad si la pantalla inicia en estado Idle
     LaunchedEffect(Unit) {
@@ -122,11 +124,13 @@ fun VisitaRegistrationScreen(
 
     val statusOptions = listOf("PREVENTA", "SIN_DINERO", "TIENDA_CERRADA", "AUSENTE")
 
-    val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicture()
-    ) { success ->
-        if (success) {
-            viewModel.onPhotoTakenSuccessfully()
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            showCameraPreview = true
+        } else {
+            Toast.makeText(appContext, "Permiso de cámara obligatorio", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -137,13 +141,16 @@ fun VisitaRegistrationScreen(
             return
         }
 
-        val photoFile = viewModel.createPrivatePhotoFile()
-        val photoUri = FileProvider.getUriForFile(
+        val hasPermission = ContextCompat.checkSelfPermission(
             context,
-            "${context.packageName}.fileprovider",
-            photoFile
-        )
-        cameraLauncher.launch(photoUri)
+            Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (hasPermission) {
+            showCameraPreview = true
+        } else {
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+        }
     }
 
     LaunchedEffect(errorMsg) {
@@ -159,6 +166,19 @@ fun VisitaRegistrationScreen(
             viewModel.resetForm()
             onNavigateBack()
         }
+    }
+
+    if (showCameraPreview) {
+        val targetFile = remember(showCameraPreview) { viewModel.createPrivatePhotoFile() }
+        VisitaCameraPreview(
+            targetFile = targetFile,
+            onPhotoCaptured = {
+                viewModel.onPhotoTakenSuccessfully()
+                showCameraPreview = false
+            },
+            onClose = { showCameraPreview = false }
+        )
+        return
     }
 
     Box(
