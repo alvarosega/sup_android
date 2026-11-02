@@ -42,12 +42,15 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.alvarosega.trackingventas.util.CatalogoTiposNegocio
 
+import com.alvarosega.trackingventas.ui.theme.glassCard
+
 // Tokens Oficiales Apple Pro
 private val IosBackgroundGrouped = Color(0xFFF5F5F7)
 private val IosCardSurface = Color(0xFFFFFFFF)
 private val IosBorderSeparator = Color(0xFFE5E5EA)
 private val IosSystemBlue = Color(0xFF007AFF)
 private val IosSystemGreen = Color(0xFF248A3D)
+private val IosSystemRed = Color(0xFFFF3B30)
 private val IosSystemAmber = Color(0xFFB25E00)
 private val IosAmberBackground = Color(0xFFFFF5E5)
 private val IosAmberSurfaceTint = Color(0xFFFFFDF9)
@@ -516,6 +519,7 @@ fun SaneamientoFormScreen(
                                                         title = null
                                                         snippet = null
                                                         infoWindow = null
+                                                        icon = getBluePinMarkerDrawable(ctx)
                                                         setAnchor(org.osmdroid.views.overlay.Marker.ANCHOR_CENTER, org.osmdroid.views.overlay.Marker.ANCHOR_BOTTOM)
                                                     }
                                                     overlays.add(marker)
@@ -749,17 +753,17 @@ private fun AppleProFieldContainer(
     val needsAttention = isMandatory && !isValid
 
     val borderModifier = if (needsAttention) {
-        Modifier.border(1.dp, IosSystemAmber, RoundedCornerShape(8.dp))
+        Modifier.border(1.2.dp, IosSystemRed, RoundedCornerShape(10.dp))
     } else {
-        Modifier.border(1.dp, IosBorderSeparator, RoundedCornerShape(8.dp))
+        Modifier.border(0.8.dp, IosBorderSeparator, RoundedCornerShape(10.dp))
     }
 
-    val backgroundColor = if (needsAttention) IosAmberSurfaceTint else IosCardSurface
+    val backgroundColor = if (needsAttention) Color(0xFFFFF5F5) else IosCardSurface
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(10.dp))
             .background(backgroundColor)
             .then(borderModifier)
             .padding(horizontal = 14.dp, vertical = 10.dp)
@@ -772,7 +776,7 @@ private fun AppleProFieldContainer(
             Text(
                 text = if (isMandatory) label else "$label (Opcional)",
                 fontSize = 11.sp,
-                color = if (needsAttention) IosSystemAmber else IosLabelSecondary,
+                color = if (needsAttention) IosSystemRed else IosLabelSecondary,
                 fontWeight = FontWeight.SemiBold
             )
 
@@ -781,14 +785,14 @@ private fun AppleProFieldContainer(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
-                            .background(IosAmberBackground)
+                            .background(Color(0xFFFFEBEA))
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = "REQUERIDO",
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
-                            color = IosSystemAmber
+                            color = IosSystemRed
                         )
                     }
                 } else {
@@ -809,7 +813,38 @@ private fun AppleProFieldContainer(
             }
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(6.dp))
         content()
     }
+}
+
+private fun getBluePinMarkerDrawable(context: android.content.Context): android.graphics.drawable.Drawable {
+    val width = 48
+    val height = 60
+    val bitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+    val canvas = android.graphics.Canvas(bitmap)
+
+    val pinColor = 0xFF007AFF.toInt()
+    val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        color = pinColor
+        style = android.graphics.Paint.Style.FILL
+    }
+
+    val path = android.graphics.Path().apply {
+        moveTo(width / 2f - 18f, 24f)
+        lineTo(width / 2f + 18f, 24f)
+        lineTo(width / 2f, height.toFloat())
+        close()
+    }
+
+    canvas.drawCircle(width / 2f, 22f, 20f, paint)
+    canvas.drawPath(path, paint)
+
+    val centerPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.WHITE
+        style = android.graphics.Paint.Style.FILL
+    }
+    canvas.drawCircle(width / 2f, 22f, 8f, centerPaint)
+
+    return android.graphics.drawable.BitmapDrawable(context.resources, bitmap)
 }
