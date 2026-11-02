@@ -111,12 +111,12 @@ fun MainMapScreen(
     val opportunities by viewModel.opportunities.collectAsState()
     val isLoadingOpportunities by viewModel.isLoadingOpportunities.collectAsState()
 
-    val baseClientsForMap = remember(allClients, mapMode, showUnvisited) {
+    val baseClientsForMap = remember(allClients, mapMode, showUnvisited, activeDay) {
         if (mapMode == MapMode.VISITAS) {
             if (showUnvisited) {
                 allClients
             } else {
-                allClients.filter { !it.status.equals("unvisited", ignoreCase = true) }
+                allClients.filter { !isReferencialClient(it, activeDay) }
             }
         } else {
             allClients
@@ -329,11 +329,7 @@ fun MainMapScreen(
 
             // Jerarquía Bicolor de Estados (2 Dimensiones: Visita x Calidad de Datos)
             val isCensoMode = mapMode == MapMode.CENSO
-            val currentDay = activeDay.ifBlank { "Lunes" }
-
-            val isReferencial = client.status.equals("unvisited", ignoreCase = true) ||
-                    client.status.equals("referencial", ignoreCase = true) ||
-                    (!client.day.isBlank() && !client.day.equals(currentDay, ignoreCase = true))
+            val isReferencial = isReferencialClient(client, activeDay)
 
             val markerStatus = if (!isCensoMode) {
                 if (isReferencial) {
@@ -562,7 +558,7 @@ fun MainMapScreen(
                 // Segmented Control de Filtro Integrado en Cabecera
                 val isVisitasMode = mapMode == MapMode.VISITAS
                 val baseClientsForCounts = if (isVisitasMode) {
-                    allClients.filter { !it.status.equals("unvisited", ignoreCase = true) }
+                    allClients.filter { !isReferencialClient(it, activeDay) }
                 } else {
                     allClients
                 }
@@ -1123,30 +1119,39 @@ private object MarkerDrawableCache {
         val key = "$status-$inRange"
         val bitmap = storeBitmaps[key] ?: run {
             if (status == StoreMarkerStatus.REFERENCIAL) {
-                val size = 32
-                val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+                val width = 42
+                val height = 48
+                val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
                 val canvas = Canvas(bmp)
 
-                // Borde exterior gris
-                val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    color = 0xFF6E6E73.toInt()
-                    style = Paint.Style.FILL
-                }
-                canvas.drawCircle(size / 2f, size / 2f, 10f, borderPaint)
-
-                // Relleno gris neutro
-                val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                val grayPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                     color = 0xFF8E8E93.toInt()
                     style = Paint.Style.FILL
                 }
-                canvas.drawCircle(size / 2f, size / 2f, 8f, fillPaint)
-
-                // Punto blanco central
-                val centerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                val darkGrayPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = 0xFF6E6E73.toInt()
+                    style = Paint.Style.FILL
+                }
+                val whitePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                     color = android.graphics.Color.WHITE
                     style = Paint.Style.FILL
                 }
-                canvas.drawCircle(size / 2f, size / 2f, 3.5f, centerPaint)
+
+                // Techo / Toldo de Tienda Comercial Referencial
+                val roofPath = android.graphics.Path().apply {
+                    moveTo(4f, 16f)
+                    lineTo(width / 2f, 4f)
+                    lineTo(width - 4f, 16f)
+                    close()
+                }
+                canvas.drawPath(roofPath, darkGrayPaint)
+
+                // Fachada Principal de la Tienda
+                canvas.drawRect(8f, 16f, width - 8f, height - 8f, grayPaint)
+
+                // Puerta y Ventana en Blanco
+                canvas.drawRect(width / 2f - 4f, height - 18f, width / 2f + 4f, height - 8f, whitePaint)
+                canvas.drawRect(12f, 20f, 18f, 26f, whitePaint)
 
                 storeBitmaps[key] = bmp
                 bmp
@@ -1262,6 +1267,13 @@ private object MarkerDrawableCache {
 
         return BitmapDrawable(context.resources, bitmap)
     }
+}
+
+private fun isReferencialClient(client: PlanRuteoEntity, activeDay: String): Boolean {
+    val dayStr = activeDay.ifBlank { "Lunes" }
+    return client.status.equals("unvisited", ignoreCase = true) ||
+            client.status.equals("referencial", ignoreCase = true) ||
+            (!client.day.isBlank() && !client.day.equals(dayStr, ignoreCase = true))
 }
 
 private fun getUserMarkerDrawable(context: Context): Drawable =
