@@ -539,15 +539,15 @@ fun PedidosRechazadosScreen(
                 }
 
                 Text(
-                    text = "${preventa.clienteNombre} • Preventa #${preventa.nroPreventa}",
+                    text = "${preventa.clienteNombre ?: "Cliente"} • Cliente ID: #${preventa.clienteId}",
                     style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = IosLabelPrimary)
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 1. TIPO DE RECHAZO (DETERMINADO POR EL SISTEMA)
+                // 1. TIPO DE RECHAZO
                 Text(
-                    text = "TIPO DE RECHAZO DENEGADO",
+                    text = "TIPO DE RECHAZO",
                     style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosLabelSecondary, letterSpacing = 0.5.sp)
                 )
 
@@ -556,15 +556,15 @@ fun PedidosRechazadosScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(if (tipoRechazo == "TOTAL") Color(0xFFFFEBEA) else Color(0xFFFFF3CD))
-                        .border(1.dp, if (tipoRechazo == "TOTAL") IosSystemRed else IosSystemOrange, RoundedCornerShape(10.dp))
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (tipoRechazo == "TOTAL") Color(0xFFFFEBEA) else Color(0xFFEBF3FF))
+                        .border(1.2.dp, if (tipoRechazo == "TOTAL") IosSystemRed else IosSystemBlue, RoundedCornerShape(12.dp))
                         .padding(12.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (tipoRechazo == "TOTAL") "RECHAZO TOTAL REGISTRADO POR EL SISTEMA" else "RECHAZO PARCIAL REGISTRADO POR EL SISTEMA",
-                        style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (tipoRechazo == "TOTAL") IosSystemRed else IosSystemOrange)
+                        text = if (tipoRechazo == "TOTAL") "RECHAZO TOTAL" else "RECHAZO PARCIAL",
+                        style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (tipoRechazo == "TOTAL") IosSystemRed else IosSystemBlue)
                     )
                 }
 
@@ -572,15 +572,15 @@ fun PedidosRechazadosScreen(
 
                 // 2. MOTIVO PRINCIPAL
                 Text(
-                    text = "MOTIVO DE RECHAZO",
-                    style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosLabelSecondary, letterSpacing = 0.5.sp)
+                    text = "MOTIVO DE RECHAZO (OBLIGATORIO)",
+                    style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (selectedMotivo == null) IosSystemRed else IosLabelSecondary, letterSpacing = 0.5.sp)
                 )
 
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Box(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
-                        value = selectedMotivo?.nombre ?: "Seleccionar motivo",
+                        value = selectedMotivo?.nombre ?: "Seleccionar motivo...",
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Motivo principal") },
@@ -589,7 +589,8 @@ fun PedidosRechazadosScreen(
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = IosCardSurface,
-                            unfocusedContainerColor = IosCardSurface
+                            unfocusedContainerColor = IosCardSurface,
+                            unfocusedBorderColor = if (selectedMotivo == null) IosSystemRed else IosBorderSeparator
                         )
                     )
 
@@ -620,8 +621,8 @@ fun PedidosRechazadosScreen(
 
                 // 3. DISTRIBUIDOR / REPARTIDOR
                 Text(
-                    text = "DISTRIBUIDOR / REPARTIDOR",
-                    style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosLabelSecondary, letterSpacing = 0.5.sp)
+                    text = "DISTRIBUIDOR / REPARTIDOR (OBLIGATORIO)",
+                    style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (selectedDistribuidor == null) IosSystemRed else IosLabelSecondary, letterSpacing = 0.5.sp)
                 )
 
                 Spacer(modifier = Modifier.height(6.dp))
@@ -637,7 +638,8 @@ fun PedidosRechazadosScreen(
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = IosCardSurface,
-                            unfocusedContainerColor = IosCardSurface
+                            unfocusedContainerColor = IosCardSurface,
+                            unfocusedBorderColor = if (selectedDistribuidor == null) IosSystemRed else IosBorderSeparator
                         )
                     )
 

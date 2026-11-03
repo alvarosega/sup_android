@@ -136,9 +136,6 @@ class PedidosRechazadosViewModel @Inject constructor(
                 if (response.isSuccessful && response.body() != null) {
                     val list = response.body()!!.motivos
                     _motivosList.value = list
-                    if (list.isNotEmpty()) {
-                        _selectedMotivo.value = list.first()
-                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error cargando catálogo de motivos", e)
@@ -154,9 +151,6 @@ class PedidosRechazadosViewModel @Inject constructor(
                 if (response.isSuccessful && response.body() != null) {
                     val list = response.body()!!.distribuidores
                     _distribuidoresList.value = list
-                    if (list.isNotEmpty()) {
-                        _selectedDistribuidor.value = list.first()
-                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error cargando catálogo de distribuidores", e)
@@ -242,9 +236,8 @@ class PedidosRechazadosViewModel @Inject constructor(
         _selectedPreventa.value = preventa
         val tipo = preventa.tipoSugerido ?: if ((preventa.montoTotalFacturado ?: 0.0) == 0.0) "TOTAL" else "PARCIAL"
         _tipoRechazo.value = tipo
-        if (_selectedMotivo.value == null && _motivosList.value.isNotEmpty()) {
-            _selectedMotivo.value = _motivosList.value.first()
-        }
+        _selectedMotivo.value = null
+        _selectedDistribuidor.value = null
         updateItemsState(preventa, tipo)
     }
 
@@ -315,9 +308,20 @@ class PedidosRechazadosViewModel @Inject constructor(
         val preventa = _selectedPreventa.value
         val items = _itemsState.value
         val motivoObj = _selectedMotivo.value
+        val distribuidorObj = _selectedDistribuidor.value
 
         if (preventa == null) {
             _statusMessage.value = "Debe seleccionar una preventa rechazada de la lista"
+            return
+        }
+
+        if (distribuidorObj == null) {
+            _statusMessage.value = "Debe seleccionar un distribuidor / repartidor"
+            return
+        }
+
+        if (motivoObj == null) {
+            _statusMessage.value = "Debe seleccionar un motivo de rechazo"
             return
         }
 
