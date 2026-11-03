@@ -54,7 +54,7 @@ private val IosSystemGreen = Color(0xFF34C759)
 private val IosSystemRed = Color(0xFFFF3B30)
 private val IosSystemOrange = Color(0xFFFF9500)
 private val IosLabelPrimary = Color(0xFF000000)
-private val IosLabelSecondary = Color(0xFF1E293B)
+private val IosLabelSecondary = Color(0xFF0F172A)
 private val IosFillQuaternary = Color(0xFFE5E5EA)
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -583,15 +583,15 @@ fun PedidosRechazadosScreen(
                         value = selectedMotivo?.nombre ?: "Seleccionar motivo...",
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Motivo principal") },
-                        trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
+                        label = { Text("Motivo principal", color = Color(0xFF0F172A), fontWeight = FontWeight.SemiBold) },
+                        trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color(0xFF000000)) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = IosCardSurface,
-                            unfocusedContainerColor = IosCardSurface,
-                            focusedTextColor = IosLabelPrimary,
-                            unfocusedTextColor = if (selectedMotivo != null) IosLabelPrimary else IosLabelSecondary,
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White,
+                            focusedTextColor = Color(0xFF000000),
+                            unfocusedTextColor = Color(0xFF000000),
                             unfocusedBorderColor = if (selectedMotivo == null) IosSystemRed else IosBorderSeparator
                         )
                     )
@@ -634,15 +634,15 @@ fun PedidosRechazadosScreen(
                         value = selectedDistribuidor?.nombre ?: "Seleccionar distribuidor...",
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Distribuidor asignado") },
-                        trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
+                        label = { Text("Distribuidor asignado", color = Color(0xFF0F172A), fontWeight = FontWeight.SemiBold) },
+                        trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color(0xFF000000)) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = IosCardSurface,
-                            unfocusedContainerColor = IosCardSurface,
-                            focusedTextColor = IosLabelPrimary,
-                            unfocusedTextColor = if (selectedDistribuidor != null) IosLabelPrimary else IosLabelSecondary,
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White,
+                            focusedTextColor = Color(0xFF000000),
+                            unfocusedTextColor = Color(0xFF000000),
                             unfocusedBorderColor = if (selectedDistribuidor == null) IosSystemRed else IosBorderSeparator
                         )
                     )
@@ -733,13 +733,16 @@ fun PedidosRechazadosScreen(
                 OutlinedTextField(
                     value = comentarios,
                     onValueChange = { viewModel.setComentarios(it) },
-                    label = { Text("Comentarios u observaciones adicionales") },
+                    label = { Text("Comentarios u observaciones adicionales", color = Color(0xFF0F172A), fontWeight = FontWeight.Medium) },
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 3,
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = IosCardSurface,
-                        unfocusedContainerColor = IosCardSurface
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        focusedTextColor = Color(0xFF000000),
+                        unfocusedTextColor = Color(0xFF000000),
+                        unfocusedBorderColor = IosBorderSeparator
                     )
                 )
 
