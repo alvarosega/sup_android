@@ -54,7 +54,7 @@ private val IosSystemGreen = Color(0xFF34C759)
 private val IosSystemRed = Color(0xFFFF3B30)
 private val IosSystemOrange = Color(0xFFFF9500)
 private val IosLabelPrimary = Color(0xFF000000)
-private val IosLabelSecondary = Color(0xFF8E8E93)
+private val IosLabelSecondary = Color(0xFF1E293B)
 private val IosFillQuaternary = Color(0xFFE5E5EA)
 
 @OptIn(ExperimentalMaterial3Api::class)
