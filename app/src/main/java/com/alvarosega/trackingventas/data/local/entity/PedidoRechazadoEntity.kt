@@ -14,6 +14,7 @@ data class PedidoRechazadoEntity(
     val fechaPreventa: String?,
     val fechaRechazo: String,
     val motivo: String,
+    val distribuidor: String? = null,
     val tipoRechazo: String, // "TOTAL" o "PARCIAL"
     val comentarios: String?,
     val latitude: Double?,

@@ -86,6 +86,9 @@ interface VisitaApiService {
     @GET("api/pedidos-rechazados/motivos")
     suspend fun getMotivosRechazo(): Response<com.alvarosega.trackingventas.data.remote.dto.MotivosResponseDto>
 
+    @GET("api/pedidos-rechazados/distribuidores")
+    suspend fun getDistribuidores(): Response<com.alvarosega.trackingventas.data.remote.dto.DistribuidoresResponseDto>
+
     @GET("api/pedidos-rechazados/preventas-pendientes")
     suspend fun getPreventasPendientes(
         @Query("cliente_id") clienteId: String? = null,

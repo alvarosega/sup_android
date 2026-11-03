@@ -13,6 +13,16 @@ data class MotivoRechazoDto(
     @SerializedName("nombre") val nombre: String
 )
 
+data class DistribuidoresResponseDto(
+    @SerializedName("success") val success: Boolean = true,
+    @SerializedName("distribuidores") val distribuidores: List<DistribuidorDto> = emptyList()
+)
+
+data class DistribuidorDto(
+    @SerializedName("id") val id: Long,
+    @SerializedName("nombre") val nombre: String
+)
+
 data class PreventasPendientesResponseDto(
     @SerializedName("success") val success: Boolean = true,
     @SerializedName("total") val total: Int = 0,

@@ -78,12 +78,15 @@ fun PedidosRechazadosScreen(
     val capturedPhotoFile by viewModel.capturedPhotoFile.collectAsState()
     val isLoadingPreventas by viewModel.isLoadingPreventas.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
+    val distribuidoresList by viewModel.distribuidoresList.collectAsState()
+    val selectedDistribuidor by viewModel.selectedDistribuidor.collectAsState()
 
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Preventas Pendientes, 1: Historial Local
     var pendingFilter by remember { mutableStateOf("TODOS") } // "TODOS", "PARCIAL", "TOTAL"
     var showCameraPreview by remember { mutableStateOf(false) }
     var showJustifySheet by remember { mutableStateOf(false) }
     var showMotivoDropdown by remember { mutableStateOf(false) }
+    var showDistribuidorDropdown by remember { mutableStateOf(false) }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -607,6 +610,54 @@ fun PedidosRechazadosScreen(
                                 onClick = {
                                     viewModel.setSelectedMotivo(motivo)
                                     showMotivoDropdown = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 3. DISTRIBUIDOR / REPARTIDOR
+                Text(
+                    text = "DISTRIBUIDOR / REPARTIDOR",
+                    style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosLabelSecondary, letterSpacing = 0.5.sp)
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = selectedDistribuidor?.nombre ?: "Seleccionar distribuidor...",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Distribuidor asignado") },
+                        trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = IosCardSurface,
+                            unfocusedContainerColor = IosCardSurface
+                        )
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clickable { showDistribuidorDropdown = true }
+                    )
+
+                    DropdownMenu(
+                        expanded = showDistribuidorDropdown,
+                        onDismissRequest = { showDistribuidorDropdown = false },
+                        modifier = Modifier.fillMaxWidth(0.9f)
+                    ) {
+                        distribuidoresList.forEach { dist ->
+                            DropdownMenuItem(
+                                text = { Text(dist.nombre, fontSize = 14.sp) },
+                                onClick = {
+                                    viewModel.selectDistribuidor(dist)
+                                    showDistribuidorDropdown = false
                                 }
                             )
                         }

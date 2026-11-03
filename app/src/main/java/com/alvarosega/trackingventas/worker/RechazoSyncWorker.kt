@@ -44,6 +44,8 @@ class RechazoSyncWorker @AssistedInject constructor(
                     .addFormDataPart("uuid", item.uuid)
                     .addFormDataPart("motivo", item.motivo)
 
+                item.distribuidor?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("distribuidor", it) }
+
                 item.nroPreventa?.takeIf { it.isNotBlank() }?.let { builder.addFormDataPart("nro_preventa", it) }
 
                 if (item.clienteId.isNotBlank()) {

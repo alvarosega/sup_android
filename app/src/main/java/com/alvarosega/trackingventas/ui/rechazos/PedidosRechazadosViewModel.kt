@@ -16,6 +16,7 @@ import com.alvarosega.trackingventas.data.local.entity.PlanRuteoEntity
 import com.alvarosega.trackingventas.data.local.pref.SessionPreferences
 import com.alvarosega.trackingventas.data.location.LocationClient
 import com.alvarosega.trackingventas.data.remote.VisitaApiService
+import com.alvarosega.trackingventas.data.remote.dto.DistribuidorDto
 import com.alvarosega.trackingventas.data.remote.dto.MotivoRechazoDto
 import com.alvarosega.trackingventas.data.remote.dto.PreventaItemDto
 import com.alvarosega.trackingventas.data.remote.dto.PreventaPendienteDto
@@ -92,6 +93,16 @@ class PedidosRechazadosViewModel @Inject constructor(
     private val _selectedMotivo = MutableStateFlow<MotivoRechazoDto?>(null)
     val selectedMotivo: StateFlow<MotivoRechazoDto?> = _selectedMotivo.asStateFlow()
 
+    private val _distribuidoresList = MutableStateFlow<List<DistribuidorDto>>(emptyList())
+    val distribuidoresList: StateFlow<List<DistribuidorDto>> = _distribuidoresList.asStateFlow()
+
+    private val _selectedDistribuidor = MutableStateFlow<DistribuidorDto?>(null)
+    val selectedDistribuidor: StateFlow<DistribuidorDto?> = _selectedDistribuidor.asStateFlow()
+
+    fun selectDistribuidor(distribuidor: DistribuidorDto) {
+        _selectedDistribuidor.value = distribuidor
+    }
+
     private val _comentarios = MutableStateFlow("")
     val comentarios: StateFlow<String> = _comentarios.asStateFlow()
 
@@ -112,6 +123,7 @@ class PedidosRechazadosViewModel @Inject constructor(
 
     init {
         loadMotivos()
+        loadDistribuidores()
         loadLocalClients()
         fetchPreventasPendientes()
     }
@@ -130,6 +142,24 @@ class PedidosRechazadosViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error cargando catálogo de motivos", e)
+            }
+        }
+    }
+
+    fun loadDistribuidores() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val response = apiService.getDistribuidores()
+                Log.d(TAG, "getDistribuidores HTTP Code: ${response.code()}")
+                if (response.isSuccessful && response.body() != null) {
+                    val list = response.body()!!.distribuidores
+                    _distribuidoresList.value = list
+                    if (list.isNotEmpty()) {
+                        _selectedDistribuidor.value = list.first()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error cargando catálogo de distribuidores", e)
             }
         }
     }
@@ -333,6 +363,7 @@ class PedidosRechazadosViewModel @Inject constructor(
                     fechaPreventa = preventa.fechaPreventa,
                     fechaRechazo = visitedAt,
                     motivo = motivoCodigo,
+                    distribuidor = _selectedDistribuidor.value?.nombre,
                     tipoRechazo = _tipoRechazo.value,
                     comentarios = _comentarios.value.ifBlank { null },
                     latitude = loc?.latitude,
