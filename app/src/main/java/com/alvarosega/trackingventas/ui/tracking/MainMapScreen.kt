@@ -370,13 +370,11 @@ fun MainMapScreen(
                     StoreMarkerStatus.PENDING_OK
                 }
             } else {
+                // EN MODO CENSO: UN SOLO COLOR SÓLIDO EXCLUSIVO DE LA LEYENDA CENSO
                 when {
-                    client.isVisited && client.hasPendingReview -> StoreMarkerStatus.VISITED_REVIEW
-                    client.isVisited && client.requiereCorreccion() -> StoreMarkerStatus.VISITED_SANEAMIENTO
-                    client.isVisited -> StoreMarkerStatus.VISITED_OK
-                    client.hasPendingReview -> StoreMarkerStatus.PENDING_REVIEW
-                    client.requiereCorreccion() -> StoreMarkerStatus.PENDING_SANEAMIENTO
-                    else -> StoreMarkerStatus.PENDING_OK
+                    client.hasPendingReview -> StoreMarkerStatus.PENDING_REVIEW // Morado
+                    client.requiereCorreccion() || client.requiereSaneamiento -> StoreMarkerStatus.PENDING_SANEAMIENTO // Naranja
+                    else -> StoreMarkerStatus.PENDING_OK // Azul
                 }
             }
 
@@ -1183,20 +1181,21 @@ private object MarkerDrawableCache {
                 val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
                 val canvas = Canvas(bmp)
 
-                val isBicolor = (status == StoreMarkerStatus.PENDING_SANEAMIENTO ||
-                        status == StoreMarkerStatus.VISITED_SANEAMIENTO ||
-                        status == StoreMarkerStatus.PENDING_REVIEW ||
-                        status == StoreMarkerStatus.VISITED_REVIEW)
-
-                val leftColor = when (status) {
-                    StoreMarkerStatus.VISITED_OK, StoreMarkerStatus.VISITED_SANEAMIENTO, StoreMarkerStatus.VISITED_REVIEW -> 0xFF34C759.toInt() // Verde (Visitado)
-                    else -> 0xFF007AFF.toInt() // Azul (No Visitado)
+                val pinSolidColor = when (status) {
+                    StoreMarkerStatus.PENDING_REVIEW -> 0xFF5856D6.toInt() // Morado (Validación en revisión)
+                    StoreMarkerStatus.PENDING_SANEAMIENTO -> 0xFFFF9500.toInt() // Naranja (Datos incorrectos / requerido)
+                    StoreMarkerStatus.VISITED_OK -> 0xFF34C759.toInt() // Verde (Visitado)
+                    else -> 0xFF007AFF.toInt() // Azul (Datos correctos / No visitado)
                 }
 
+                val isBicolor = (status == StoreMarkerStatus.VISITED_SANEAMIENTO ||
+                        status == StoreMarkerStatus.VISITED_REVIEW)
+
+                val leftColor = if (isBicolor) 0xFF34C759.toInt() else pinSolidColor
                 val rightColor = when (status) {
-                    StoreMarkerStatus.PENDING_SANEAMIENTO, StoreMarkerStatus.VISITED_SANEAMIENTO -> 0xFFFF9500.toInt() // Naranja (Datos Incorrectos)
-                    StoreMarkerStatus.PENDING_REVIEW, StoreMarkerStatus.VISITED_REVIEW -> 0xFF5856D6.toInt() // Morado (Validación de Datos)
-                    else -> leftColor // Unicolor
+                    StoreMarkerStatus.VISITED_SANEAMIENTO -> 0xFFFF9500.toInt()
+                    StoreMarkerStatus.VISITED_REVIEW -> 0xFF5856D6.toInt()
+                    else -> leftColor
                 }
 
                 val path = android.graphics.Path().apply {
