@@ -42,6 +42,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -193,11 +194,11 @@ fun VisitaRegistrationScreen(
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
-            // Top Bar estilo iOS
+            // Top Bar estilo iOS con datos del cliente seleccionado y tipo de negocio en ROJO
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(54.dp)
+                    .height(58.dp)
                     .background(IosCardSurface)
                     .border(0.5.dp, IosBorderSeparator)
                     .padding(horizontal = 12.dp),
@@ -225,25 +226,35 @@ fun VisitaRegistrationScreen(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "Ruta",
-                        style = TextStyle(fontSize = 16.sp, color = IosSystemBlue, fontWeight = FontWeight.Normal)
+                        style = TextStyle(fontSize = 15.sp, color = IosSystemBlue, fontWeight = FontWeight.Normal)
                     )
                 }
 
-                Text(
-                    text = "Registrar Visita",
-                    style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = IosLabelPrimary)
-                )
-
-                Box(
+                Column(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(IosFillQuaternary)
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .weight(1f)
+                        .padding(start = 12.dp),
+                    horizontalAlignment = Alignment.End
                 ) {
                     Text(
-                        text = if (activeRoute.isNotBlank()) activeRoute else "Ruta",
-                        style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = IosLabelSecondary)
+                        text = selectedClient?.clientName ?: "Registrar Visita",
+                        style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        selectedClient?.clientId?.let {
+                            Text(
+                                text = "#$it",
+                                style = TextStyle(fontSize = 11.sp, color = IosLabelSecondary, fontWeight = FontWeight.Medium)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                        }
+                        Text(
+                            text = selectedClient?.tipoNegocio ?: "General",
+                            style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosSystemRed)
+                        )
+                    }
                 }
             }
 
@@ -684,7 +695,7 @@ fun VisitaRegistrationScreen(
                                                 if (timelineList.isNotEmpty()) {
                                                     Spacer(modifier = Modifier.height(3.dp))
                                                     Text(
-                                                        text = if (showHistoryDetail) "▲ Ocultar historial" else "▼ Ver historial completo (${timelineList.size})",
+                                                        text = if (showHistoryDetail) "Ocultar historial" else "Ver historial completo (${timelineList.size})",
                                                         style = TextStyle(fontSize = 12.sp, color = IosSystemBlue, fontWeight = FontWeight.Bold)
                                                     )
                                                 }
@@ -767,9 +778,9 @@ fun VisitaRegistrationScreen(
                                                         verticalAlignment = Alignment.CenterVertically
                                                     ) {
                                                         if (ev.tipo == "COMPRA") {
-                                                            Text("🛒 Compra: +${ev.cantidad} un.", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosSystemBlue)
+                                                            Text("Compra: +${ev.cantidad} un.", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosSystemBlue)
                                                         } else {
-                                                            Text("📋 Stock en PDV: ${ev.cantidad} un.", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosSystemGreen)
+                                                            Text("Stock en PDV: ${ev.cantidad} un.", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosSystemGreen)
                                                         }
                                                         Text(ev.fecha, fontSize = 11.sp, color = IosLabelSecondary)
                                                     }
