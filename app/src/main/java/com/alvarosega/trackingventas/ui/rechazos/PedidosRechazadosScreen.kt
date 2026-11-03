@@ -695,9 +695,20 @@ fun PedidosRechazadosScreen(
                             verticalAlignment = Alignment.Top
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(editable.item.productoNombre ?: "Producto", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                Text("Cód: ${editable.item.codigoProducto} • Precio: Bs. ${editable.item.precioUnitario}", fontSize = 12.sp, color = IosLabelSecondary)
-                                Text("Pedida: ${editable.item.cantidadPreventa} • Facturada: ${editable.item.cantidadFacturada ?: 0}", fontSize = 12.sp, color = IosSystemBlue, fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    text = editable.item.productoNombre ?: "Producto",
+                                    style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF000000))
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "Cód: ${editable.item.codigoProducto} • Precio: Bs. ${editable.item.precioUnitario}",
+                                    style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xFF0F172A))
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "Pedida: ${editable.item.cantidadPreventa} • Facturada: ${editable.item.cantidadFacturada ?: 0}",
+                                    style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosSystemBlue)
+                                )
                             }
 
                             Box(
