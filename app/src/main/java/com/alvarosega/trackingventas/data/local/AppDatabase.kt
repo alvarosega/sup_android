@@ -31,7 +31,7 @@ import com.alvarosega.trackingventas.data.local.entity.InventarioClienteEntity
         PedidoRechazadoEntity::class,
         InventarioClienteEntity::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
