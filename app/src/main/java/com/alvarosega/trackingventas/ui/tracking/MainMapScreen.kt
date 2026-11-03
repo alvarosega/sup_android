@@ -741,69 +741,30 @@ fun MainMapScreen(
                                     Text("referencial (otro día)", fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
                                 }
                             } else {
-                                // LEYENDA COMPLETA BICOLOR PARA MODO CENSO / SANEAMIENTO
-                                // 1. Azul: no visitado
+                                // LEYENDA EXCLUSIVA MODO CENSO / DATOS (SIN RUIDO DE VISITAS)
+                                // 1. Azul: Datos Correctos
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Box(modifier = Modifier.size(10.dp).background(IosSystemBlue, CircleShape))
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("no visitado", fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
+                                    Text("datos correctos", fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
                                 }
 
                                 Spacer(modifier = Modifier.height(4.dp))
 
-                                // 2. Bicolor Azul/Naranja: no visitado, datos incorrectos
+                                // 2. Naranja: Datos Incorrectos / Requerido
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Row(modifier = Modifier.size(10.dp).clip(CircleShape)) {
-                                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemBlue))
-                                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemAmber))
-                                    }
+                                    Box(modifier = Modifier.size(10.dp).background(IosSystemAmber, CircleShape))
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("no visitado, datos incorrectos", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
+                                    Text("datos incorrectos / requerido", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
                                 }
 
                                 Spacer(modifier = Modifier.height(4.dp))
 
-                                // 3. Bicolor Azul/Morado: no visitado, validación de datos
+                                // 3. Morado: Edición en Revisión
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Row(modifier = Modifier.size(10.dp).clip(CircleShape)) {
-                                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemBlue))
-                                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemPurple))
-                                    }
+                                    Box(modifier = Modifier.size(10.dp).background(IosSystemPurple, CircleShape))
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("no visitado, validación de datos", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
-                                }
-
-                                Spacer(modifier = Modifier.height(4.dp))
-
-                                // 4. Bicolor Verde/Naranja: visitado, datos incorrectos
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Row(modifier = Modifier.size(10.dp).clip(CircleShape)) {
-                                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemGreen))
-                                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemAmber))
-                                    }
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("visitado, datos incorrectos", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
-                                }
-
-                                Spacer(modifier = Modifier.height(4.dp))
-
-                                // 5. Bicolor Verde/Morado: visitado, validación de datos
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Row(modifier = Modifier.size(10.dp).clip(CircleShape)) {
-                                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemGreen))
-                                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(IosSystemPurple))
-                                    }
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("visitado, validación de datos", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
-                                }
-
-                                Spacer(modifier = Modifier.height(4.dp))
-
-                                // 6. Verde: visitado, datos correctos
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(modifier = Modifier.size(10.dp).background(IosSystemGreen, CircleShape))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("visitado, datos correctos", fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
+                                    Text("validación / edición en revisión", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -1065,46 +1026,64 @@ fun MainMapScreen(
 
                             Spacer(modifier = Modifier.height(10.dp))
 
-                            // Botón de Acción Principal "Registrar Visita"
-                            Button(
-                                onClick = {
-                                    if (!viewModel.isGpsEnabled()) {
-                                        Toast.makeText(context, "El GPS está apagado. Debe activar la ubicación para registrar una visita.", Toast.LENGTH_LONG).show()
-                                        context.startActivity(android.content.Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
-                                        return@Button
-                                    }
-                                    val loc = latestLocation
-                                    if (loc == null) {
-                                        Toast.makeText(context, "Esperando señal GPS...", Toast.LENGTH_SHORT).show()
-                                        return@Button
-                                    }
-                                    visitaViewModel.startVisitaForClient(
-                                        client = client,
-                                        distanceMeters = (distToClient ?: Float.MAX_VALUE.toDouble()).toFloat(),
-                                        lat = loc.latitude,
-                                        lon = loc.longitude,
-                                        accuracy = loc.accuracy
+                            // Botón de Acción Principal (Modo Censo: "Editar Datos Cliente" | Modo Visitas: "Registrar Visita")
+                            if (isCensoMode) {
+                                Button(
+                                    onClick = { onNavigateToEditarCliente(client) },
+                                    colors = ButtonDefaults.buttonColors(containerColor = IosSystemPurple),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(42.dp)
+                                ) {
+                                    Icon(Icons.Default.Edit, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Editar Datos Cliente",
+                                        style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                     )
-                                    onNavigateToVisita()
-                                },
-                                enabled = isInRange,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = IosSystemGreen,
-                                    disabledContainerColor = IosFillQuaternary
-                                ),
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(42.dp)
-                            ) {
-                                Text(
-                                    text = if (isInRange) "Registrar Visita" else "Acércate a menos de ${PROXIMITY_RADIUS_METERS.toInt()}m",
-                                    style = TextStyle(
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (isInRange) Color.White else IosLabelSecondary
+                                }
+                            } else {
+                                Button(
+                                    onClick = {
+                                        if (!viewModel.isGpsEnabled()) {
+                                            Toast.makeText(context, "El GPS está apagado. Debe activar la ubicación para registrar una visita.", Toast.LENGTH_LONG).show()
+                                            context.startActivity(android.content.Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                                            return@Button
+                                        }
+                                        val loc = latestLocation
+                                        if (loc == null) {
+                                            Toast.makeText(context, "Esperando señal GPS...", Toast.LENGTH_SHORT).show()
+                                            return@Button
+                                        }
+                                        visitaViewModel.startVisitaForClient(
+                                            client = client,
+                                            distanceMeters = (distToClient ?: Float.MAX_VALUE.toDouble()).toFloat(),
+                                            lat = loc.latitude,
+                                            lon = loc.longitude,
+                                            accuracy = loc.accuracy
+                                        )
+                                        onNavigateToVisita()
+                                    },
+                                    enabled = isInRange,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = IosSystemGreen,
+                                        disabledContainerColor = IosFillQuaternary
+                                    ),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(42.dp)
+                                ) {
+                                    Text(
+                                        text = if (isInRange) "Registrar Visita" else "Acércate a menos de ${PROXIMITY_RADIUS_METERS.toInt()}m",
+                                        style = TextStyle(
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isInRange) Color.White else IosLabelSecondary
+                                        )
                                     )
-                                )
+                                }
                             }
                         }
                     }
