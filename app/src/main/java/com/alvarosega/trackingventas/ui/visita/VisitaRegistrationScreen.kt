@@ -777,7 +777,7 @@ fun VisitaRegistrationScreen(
             val isFormValid = isOperationActive &&
                     capturedPhotos.isNotEmpty() &&
                     selectedStatus != null &&
-                    selectedClient != null
+                    effectiveClient != null
 
             Box(
                 modifier = Modifier
@@ -797,7 +797,7 @@ fun VisitaRegistrationScreen(
                         isSaving = true
                         val distance = (proximityState as? ProximityUiState.SingleClientMatch)?.distance?.toDouble()
                         viewModel.saveVisita(
-                            selectedClient = selectedClient,
+                            selectedClient = effectiveClient,
                             isOpportunity = false,
                             opportunityClientName = null,
                             status = selectedStatus,
@@ -824,7 +824,7 @@ fun VisitaRegistrationScreen(
                         CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
                     } else {
                         Text(
-                            text = if (selectedClient == null) "Seleccione un cliente o registre Alta" else "Confirmar y Guardar Visita Completa",
+                            text = if (effectiveClient == null) "Seleccione un cliente o registre Alta" else "Confirmar y Guardar Visita Completa",
                             style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         )
                     }
