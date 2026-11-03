@@ -515,7 +515,7 @@ fun PedidosRechazadosScreen(
         ModalBottomSheet(
             onDismissRequest = { showJustifySheet = false },
             sheetState = sheetState,
-            containerColor = IosBackground
+            containerColor = Color.White
         ) {
             Column(
                 modifier = Modifier
@@ -590,6 +590,8 @@ fun PedidosRechazadosScreen(
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = IosCardSurface,
                             unfocusedContainerColor = IosCardSurface,
+                            focusedTextColor = IosLabelPrimary,
+                            unfocusedTextColor = if (selectedMotivo != null) IosLabelPrimary else IosLabelSecondary,
                             unfocusedBorderColor = if (selectedMotivo == null) IosSystemRed else IosBorderSeparator
                         )
                     )
@@ -639,6 +641,8 @@ fun PedidosRechazadosScreen(
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = IosCardSurface,
                             unfocusedContainerColor = IosCardSurface,
+                            focusedTextColor = IosLabelPrimary,
+                            unfocusedTextColor = if (selectedDistribuidor != null) IosLabelPrimary else IosLabelSecondary,
                             unfocusedBorderColor = if (selectedDistribuidor == null) IosSystemRed else IosBorderSeparator
                         )
                     )
@@ -699,7 +703,7 @@ fun PedidosRechazadosScreen(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(6.dp))
-                                    .background(if (editable.cantidadRechazada > 0) Color(0xFFFFEBEA) else IosFillQuaternary)
+                                    .background(if (editable.cantidadRechazada > 0) Color(0xFFFFEBEA) else Color(0xFFEBFBF0))
                                     .padding(horizontal = 8.dp, vertical = 4.dp)
                             ) {
                                 Text(
@@ -707,7 +711,7 @@ fun PedidosRechazadosScreen(
                                     style = TextStyle(
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (editable.cantidadRechazada > 0) IosSystemRed else IosLabelSecondary
+                                        color = if (editable.cantidadRechazada > 0) IosSystemRed else IosSystemGreen
                                     )
                                 )
                             }
