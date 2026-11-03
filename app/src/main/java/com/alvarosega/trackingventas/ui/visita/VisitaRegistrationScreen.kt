@@ -105,6 +105,14 @@ fun VisitaRegistrationScreen(
     var isSaving by remember { mutableStateOf(false) }
     var showCameraPreview by remember { mutableStateOf(false) }
 
+    val activeMatchedClient = remember(proximityState) {
+        when (val state = proximityState) {
+            is ProximityUiState.SingleClientMatch -> state.client
+            else -> null
+        }
+    }
+    val effectiveClient = selectedClient ?: activeMatchedClient
+
     // Evaluación automática de proximidad si la pantalla inicia en estado Idle
     LaunchedEffect(Unit) {
         if (viewModel.proximityState.value is ProximityUiState.Idle) {
@@ -237,23 +245,26 @@ fun VisitaRegistrationScreen(
                     horizontalAlignment = Alignment.End
                 ) {
                     Text(
-                        text = selectedClient?.clientName ?: "Registrar Visita",
+                        text = effectiveClient?.clientName ?: "Registrar Visita",
                         style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        selectedClient?.clientId?.let {
+                        effectiveClient?.clientId?.let {
                             Text(
                                 text = "#$it",
                                 style = TextStyle(fontSize = 11.sp, color = IosLabelSecondary, fontWeight = FontWeight.Medium)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                         }
-                        Text(
-                            text = selectedClient?.tipoNegocio ?: "General",
-                            style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosSystemRed)
-                        )
+                        val tipo = effectiveClient?.tipoNegocio
+                        if (!tipo.isNullOrBlank()) {
+                            Text(
+                                text = tipo,
+                                style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosSystemRed)
+                            )
+                        }
                     }
                 }
             }
