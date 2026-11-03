@@ -583,14 +583,9 @@ fun MainMapScreen(
                     }
                 }
 
-                // Segmented Control de Filtro Integrado en Cabecera
-                val isVisitasMode = mapMode == MapMode.VISITAS
-                val baseClientsForCounts = if (isVisitasMode) {
-                    allClients.filter { !isReferencialClient(it) }
-                } else {
-                    allClients
-                }
-
+            val isVisitasMode = mapMode == MapMode.VISITAS
+            if (isVisitasMode) {
+                val baseClientsForCounts = allClients.filter { !isReferencialClient(it) }
                 val totalCount = baseClientsForCounts.size
                 val pendingCount = baseClientsForCounts.count { !it.isVisited }
                 val visitedCount = baseClientsForCounts.count { it.isVisited }
@@ -634,6 +629,7 @@ fun MainMapScreen(
                         }
                     }
                 }
+            }
             }
         }
 
@@ -739,12 +735,16 @@ fun MainMapScreen(
                                     Text("referencial (otro día)", fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
                                 }
                             } else {
-                                // LEYENDA EXCLUSIVA MODO CENSO / DATOS (SIN RUIDO DE VISITAS)
+                                // LEYENDA EXCLUSIVA MODO CENSO / DATOS (CON CONTEO # POR TIPO)
+                                val censoCountReview = allClients.count { it.hasPendingReview }
+                                val censoCountSaneamiento = allClients.count { !it.hasPendingReview && (it.requiereCorreccion() || it.requiereSaneamiento) }
+                                val censoCountOk = allClients.count { !it.hasPendingReview && !it.requiereCorreccion() && !it.requiereSaneamiento }
+
                                 // 1. Azul: Datos Correctos
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Box(modifier = Modifier.size(10.dp).background(IosSystemBlue, CircleShape))
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("datos correctos", fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
+                                    Text("datos correctos ($censoCountOk)", fontSize = 11.sp, color = IosLabelPrimary, fontWeight = FontWeight.Medium)
                                 }
 
                                 Spacer(modifier = Modifier.height(4.dp))
@@ -753,7 +753,7 @@ fun MainMapScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Box(modifier = Modifier.size(10.dp).background(IosSystemAmber, CircleShape))
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("datos incorrectos / requerido", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
+                                    Text("datos incorrectos ($censoCountSaneamiento)", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
                                 }
 
                                 Spacer(modifier = Modifier.height(4.dp))
@@ -762,7 +762,7 @@ fun MainMapScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Box(modifier = Modifier.size(10.dp).background(IosSystemPurple, CircleShape))
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("validación / edición en revisión", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
+                                    Text("validación en revisión ($censoCountReview)", fontSize = 10.sp, color = IosLabelPrimary, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
