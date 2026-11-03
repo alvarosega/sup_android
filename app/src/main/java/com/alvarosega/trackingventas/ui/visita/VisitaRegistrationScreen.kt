@@ -49,6 +49,8 @@ import androidx.core.content.FileProvider
 import com.alvarosega.trackingventas.data.local.entity.PlanRuteoEntity
 import com.alvarosega.trackingventas.data.remote.dto.ProductoInventarioDto
 import com.alvarosega.trackingventas.ui.camera.VisitaCameraPreview
+import com.alvarosega.trackingventas.ui.theme.IosColors
+import com.alvarosega.trackingventas.ui.theme.glassCard
 
 private data class EventoTimelineData(
     val fecha: String,
@@ -184,7 +186,7 @@ fun VisitaRegistrationScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(IosBackgroundGrouped)
+            .background(IosColors.BackgroundMesh)
             .statusBarsPadding()
             .navigationBarsPadding()
             .imePadding()
@@ -288,9 +290,7 @@ fun VisitaRegistrationScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(IosCardSurface)
-                                .border(0.8.dp, IosBorderSeparator, RoundedCornerShape(16.dp))
+                                .glassCard(shape = RoundedCornerShape(22.dp), elevation = 6.dp)
                                 .padding(16.dp)
                         ) {
                             Row(
@@ -448,9 +448,12 @@ fun VisitaRegistrationScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(48.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isSelected) IosSystemBlue else IosCardSurface)
-                                    .border(0.8.dp, if (isSelected) IosSystemBlue else IosBorderSeparator, RoundedCornerShape(12.dp))
+                                    .glassCard(
+                                        shape = RoundedCornerShape(14.dp),
+                                        elevation = if (isSelected) 6.dp else 2.dp,
+                                        borderGradient = if (isSelected) IosColors.BlueGradient else IosColors.GlassBorderGradient
+                                    )
+                                    .background(if (isSelected) IosSystemBlue else Color.Transparent)
                                     .clickable { if (!isSaving) selectedStatus = status },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -476,9 +479,12 @@ fun VisitaRegistrationScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(48.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isSelected) IosSystemBlue else IosCardSurface)
-                                    .border(0.8.dp, if (isSelected) IosSystemBlue else IosBorderSeparator, RoundedCornerShape(12.dp))
+                                    .glassCard(
+                                        shape = RoundedCornerShape(14.dp),
+                                        elevation = if (isSelected) 6.dp else 2.dp,
+                                        borderGradient = if (isSelected) IosColors.BlueGradient else IosColors.GlassBorderGradient
+                                    )
+                                    .background(if (isSelected) IosSystemBlue else Color.Transparent)
                                     .clickable { if (!isSaving) selectedStatus = status },
                                 contentAlignment = Alignment.Center
                             ) {
