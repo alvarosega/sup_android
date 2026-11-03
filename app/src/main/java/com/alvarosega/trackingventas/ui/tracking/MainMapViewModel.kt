@@ -86,7 +86,7 @@ class MainMapViewModel @Inject constructor(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _showUnvisited = MutableStateFlow(true)
+    private val _showUnvisited = MutableStateFlow(false)
     val showUnvisited: StateFlow<Boolean> = _showUnvisited.asStateFlow()
 
     fun toggleShowUnvisited() {
