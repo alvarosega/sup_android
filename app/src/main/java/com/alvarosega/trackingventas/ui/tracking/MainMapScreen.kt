@@ -1068,7 +1068,26 @@ fun MainMapScreen(
                                 }
                                 MapMode.INVENTARIO -> {
                                     Button(
-                                        onClick = { onNavigateToInventario(client.clientId) },
+                                        onClick = {
+                                            if (!viewModel.isGpsEnabled()) {
+                                                Toast.makeText(context, "El GPS está apagado. Debe activar la ubicación para realizar la toma de stock.", Toast.LENGTH_LONG).show()
+                                                context.startActivity(android.content.Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                                                return@Button
+                                            }
+                                            val loc = latestLocation
+                                            if (loc == null) {
+                                                Toast.makeText(context, "Esperando señal GPS...", Toast.LENGTH_SHORT).show()
+                                                return@Button
+                                            }
+                                            visitaViewModel.startVisitaForClient(
+                                                client = client,
+                                                distanceMeters = (distToClient ?: Float.MAX_VALUE.toDouble()).toFloat(),
+                                                lat = loc.latitude,
+                                                lon = loc.longitude,
+                                                accuracy = loc.accuracy
+                                            )
+                                            onNavigateToInventario(client.clientId)
+                                        },
                                         colors = ButtonDefaults.buttonColors(containerColor = IosSystemGreen),
                                         shape = RoundedCornerShape(10.dp),
                                         modifier = Modifier

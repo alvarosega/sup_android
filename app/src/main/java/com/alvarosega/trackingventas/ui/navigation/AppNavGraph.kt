@@ -100,6 +100,9 @@ fun AppNavGraph(
                 },
                 onNavigateToEditarCliente = { client ->
                     navController.navigate("saneamiento_form?clientId=${client.clientId}")
+                },
+                onNavigateToInventario = { clienteId ->
+                    navController.navigate(Screen.VISITA_REGISTRATION)
                 }
             )
         }
