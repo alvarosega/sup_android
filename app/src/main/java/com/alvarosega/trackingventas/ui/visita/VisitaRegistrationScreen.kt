@@ -259,6 +259,14 @@ fun VisitaRegistrationScreen(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                         }
+                        val phoneNum = effectiveClient?.telefono?.ifBlank { null } ?: effectiveClient?.celular?.ifBlank { null }
+                        if (!phoneNum.isNullOrBlank()) {
+                            Text(
+                                text = "Tel: $phoneNum",
+                                style = TextStyle(fontSize = 11.sp, color = IosSystemBlue, fontWeight = FontWeight.SemiBold)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                        }
                         val tipo = effectiveClient?.tipoNegocio
                         if (!tipo.isNullOrBlank()) {
                             Text(
