@@ -78,6 +78,7 @@ private val IosFillQuaternary = Color(0xFFE5E5EA)
 fun VisitaRegistrationScreen(
     viewModel: VisitaViewModel,
     sellerCode: String,
+    isInventarioOnlyMode: Boolean = false,
     onNavigateBack: () -> Unit,
     onRegisteredSuccessfully: () -> Unit,
     onNavigateToSaneamiento: (Long?) -> Unit,
@@ -122,8 +123,8 @@ fun VisitaRegistrationScreen(
 
     var lastClientId by remember { mutableStateOf<Long?>(null) }
 
-    LaunchedEffect(selectedClient?.clientId) {
-        val newId = selectedClient?.clientId
+    LaunchedEffect(effectiveClient?.clientId) {
+        val newId = effectiveClient?.clientId
         if (newId != null && newId != lastClientId) {
             lastClientId = newId
             selectedStatus = null
@@ -245,7 +246,7 @@ fun VisitaRegistrationScreen(
                     horizontalAlignment = Alignment.End
                 ) {
                     Text(
-                        text = effectiveClient?.clientName ?: "Registrar Visita",
+                        text = effectiveClient?.clientName ?: if (isInventarioOnlyMode) "Toma de Stock" else "Registrar Visita",
                         style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -269,100 +270,95 @@ fun VisitaRegistrationScreen(
                 }
             }
 
-            // CONTENIDO UNIFICADO DE PASO ÚNICO
+            // CONTENIDO UNIFICADO DE PASO ÚNICO SEGÚN EL MODO
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 14.dp)
             ) {
+                if (!isInventarioOnlyMode) {
+                    // MODO REGISTRO DE VISITA: Estado de Atención
+                    Text(
+                        text = "ESTADO DE ATENCIÓN",
+                        style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosLabelSecondary, letterSpacing = 0.5.sp)
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
 
-                // 1. SECCIÓN: Estado de Atención (Grilla 2x2 Táctil)
-                Text(
-                    text = "ESTADO DE ATENCIÓN",
-                    style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosLabelSecondary, letterSpacing = 0.5.sp)
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Row(
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        for (i in 0..1) {
-                            val status = statusOptions[i]
-                            val isSelected = selectedStatus == status
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(48.dp)
-                                    .glassCard(
-                                        shape = RoundedCornerShape(14.dp),
-                                        elevation = if (isSelected) 6.dp else 2.dp,
-                                        borderGradient = if (isSelected) IosColors.BlueGradient else IosColors.GlassBorderGradient
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            for (i in 0..1) {
+                                val status = statusOptions[i]
+                                val isSelected = selectedStatus == status
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(48.dp)
+                                        .glassCard(
+                                            shape = RoundedCornerShape(14.dp),
+                                            elevation = if (isSelected) 6.dp else 2.dp,
+                                            borderGradient = if (isSelected) IosColors.BlueGradient else IosColors.GlassBorderGradient
+                                        )
+                                        .background(if (isSelected) IosSystemBlue else Color.Transparent)
+                                        .clickable { if (!isSaving) selectedStatus = status },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = status.replace("_", " "),
+                                        style = TextStyle(
+                                            fontSize = 13.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isSelected) Color.White else IosLabelPrimary
+                                        )
                                     )
-                                    .background(if (isSelected) IosSystemBlue else Color.Transparent)
-                                    .clickable { if (!isSaving) selectedStatus = status },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = status.replace("_", " "),
-                                    style = TextStyle(
-                                        fontSize = 13.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (isSelected) Color.White else IosLabelPrimary
+                                }
+                            }
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            for (i in 2..3) {
+                                val status = statusOptions[i]
+                                val isSelected = selectedStatus == status
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(48.dp)
+                                        .glassCard(
+                                            shape = RoundedCornerShape(14.dp),
+                                            elevation = if (isSelected) 6.dp else 2.dp,
+                                            borderGradient = if (isSelected) IosColors.BlueGradient else IosColors.GlassBorderGradient
+                                        )
+                                        .background(if (isSelected) IosSystemBlue else Color.Transparent)
+                                        .clickable { if (!isSaving) selectedStatus = status },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = status.replace("_", " "),
+                                        style = TextStyle(
+                                            fontSize = 13.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isSelected) Color.White else IosLabelPrimary
+                                        )
                                     )
-                                )
+                                }
                             }
                         }
                     }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        for (i in 2..3) {
-                            val status = statusOptions[i]
-                            val isSelected = selectedStatus == status
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(48.dp)
-                                    .glassCard(
-                                        shape = RoundedCornerShape(14.dp),
-                                        elevation = if (isSelected) 6.dp else 2.dp,
-                                        borderGradient = if (isSelected) IosColors.BlueGradient else IosColors.GlassBorderGradient
-                                    )
-                                    .background(if (isSelected) IosSystemBlue else Color.Transparent)
-                                    .clickable { if (!isSaving) selectedStatus = status },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = status.replace("_", " "),
-                                    style = TextStyle(
-                                        fontSize = 13.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (isSelected) Color.White else IosLabelPrimary
-                                    )
-                                )
-                            }
-                        }
-                    }
-                }
 
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // 3. SECCIÓN: CENSO DE STOCK / INVENTARIO EN PDV (CONDICIONAL - Solo si no es Tienda Cerrada)
-                val requiresStockCensus = selectedStatus == "PREVENTA" ||
-                        selectedStatus == "SIN_DINERO" ||
-                        selectedStatus == "AUSENTE" ||
-                        selectedStatus == "ATENDIDO"
-                if (requiresStockCensus) {
+                    Spacer(modifier = Modifier.height(20.dp))
+                } else {
+                    // MODO TOMA DE STOCK EN PDV: Censo de Inventario con Historial de Movimientos
                     if (isInventarioActive && productosHistorial.isNotEmpty()) {
                         Text(
-                            text = "CENSO DE STOCK EN PDV (OPCIONAL)",
+                            text = "CENSO DE STOCK EN PDV E HISTORIAL DE MOVIMIENTOS",
                             style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosSystemBlue, letterSpacing = 0.5.sp)
                         )
                         Spacer(modifier = Modifier.height(6.dp))
@@ -512,10 +508,8 @@ fun VisitaRegistrationScreen(
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(IosCardSurface)
-                                            .border(0.8.dp, IosBorderSeparator, RoundedCornerShape(12.dp))
-                                            .padding(12.dp)
+                                            .glassCard(shape = RoundedCornerShape(18.dp), elevation = 4.dp)
+                                            .padding(14.dp)
                                     ) {
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
@@ -636,7 +630,7 @@ fun VisitaRegistrationScreen(
                     }
                 }
 
-                // 4. SECCIÓN: Evidencia Fotográfica
+                // 2. SECCIÓN: Evidencia Fotográfica
                 Text(
                     text = "EVIDENCIA FOTOGRÁFICA (${capturedPhotos.size})",
                     style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosLabelSecondary, letterSpacing = 0.5.sp)
@@ -646,9 +640,7 @@ fun VisitaRegistrationScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(IosCardSurface)
-                        .border(0.8.dp, IosBorderSeparator, RoundedCornerShape(16.dp))
+                        .glassCard(shape = RoundedCornerShape(22.dp), elevation = 6.dp)
                         .padding(12.dp)
                 ) {
                     if (capturedPhotos.isNotEmpty()) {
@@ -741,7 +733,7 @@ fun VisitaRegistrationScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // 5. SECCIÓN: Observaciones
+                // 3. SECCIÓN: Observaciones
                 Text(
                     text = "OBSERVACIONES (OPCIONAL)",
                     style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosLabelSecondary, letterSpacing = 0.5.sp)
@@ -751,15 +743,13 @@ fun VisitaRegistrationScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(80.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(IosCardSurface)
-                        .border(0.8.dp, IosBorderSeparator, RoundedCornerShape(16.dp))
+                        .height(90.dp)
+                        .glassCard(shape = RoundedCornerShape(18.dp), elevation = 4.dp)
                         .padding(14.dp),
                     contentAlignment = Alignment.TopStart
                 ) {
                     if (comments.isEmpty()) {
-                        Text("Detalles adicionales de la visita...", fontSize = 14.sp, color = IosLabelSecondary)
+                        Text("Detalles adicionales...", fontSize = 14.sp, color = IosLabelSecondary)
                     }
                     BasicTextField(
                         value = comments,
@@ -774,10 +764,11 @@ fun VisitaRegistrationScreen(
             }
 
             // Botón de Confirmación Fijo Inferior
-            val isFormValid = isOperationActive &&
-                    capturedPhotos.isNotEmpty() &&
-                    selectedStatus != null &&
-                    effectiveClient != null
+            val isFormValid = if (isInventarioOnlyMode) {
+                isOperationActive && effectiveClient != null
+            } else {
+                isOperationActive && capturedPhotos.isNotEmpty() && selectedStatus != null && effectiveClient != null
+            }
 
             Box(
                 modifier = Modifier
@@ -789,7 +780,7 @@ fun VisitaRegistrationScreen(
                 Button(
                     onClick = {
                         if (!viewModel.isGpsEnabled()) {
-                            Toast.makeText(appContext, "El GPS debe estar encendido para guardar la visita", Toast.LENGTH_LONG).show()
+                            Toast.makeText(appContext, "El GPS debe estar encendido para guardar", Toast.LENGTH_LONG).show()
                             context.startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
                             return@Button
                         }
@@ -800,11 +791,12 @@ fun VisitaRegistrationScreen(
                             selectedClient = effectiveClient,
                             isOpportunity = false,
                             opportunityClientName = null,
-                            status = selectedStatus,
+                            status = if (isInventarioOnlyMode) "ATENDIDO" else selectedStatus,
                             comments = comments,
                             distanceToClientMeters = distance,
                             onSuccess = {
-                                Toast.makeText(appContext, "Visita e inventario guardados correctamente", Toast.LENGTH_SHORT).show()
+                                val msg = if (isInventarioOnlyMode) "Toma de Stock guardada correctamente" else "Visita registrada correctamente"
+                                Toast.makeText(appContext, msg, Toast.LENGTH_SHORT).show()
                                 onRegisteredSuccessfully()
                             }
                         )
@@ -823,8 +815,15 @@ fun VisitaRegistrationScreen(
                     if (isSaving) {
                         CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
                     } else {
+                        val btnText = if (effectiveClient == null) {
+                            "Seleccione un cliente"
+                        } else if (isInventarioOnlyMode) {
+                            "Confirmar y Guardar Toma de Stock"
+                        } else {
+                            "Confirmar y Guardar Visita"
+                        }
                         Text(
-                            text = if (effectiveClient == null) "Seleccione un cliente o registre Alta" else "Confirmar y Guardar Visita Completa",
+                            text = btnText,
                             style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         )
                     }
