@@ -33,7 +33,7 @@ enum class MapFilterType {
 }
 
 enum class MapMode {
-    VISITAS, CENSO
+    VISITAS, CENSO, INVENTARIO
 }
 
 data class LocationPoint(

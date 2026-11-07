@@ -93,7 +93,8 @@ fun MainMapScreen(
     onBack: () -> Unit,
     onNavigateToVisita: () -> Unit,
     onNavigateToAltaCliente: () -> Unit,
-    onNavigateToEditarCliente: (PlanRuteoEntity) -> Unit = {}
+    onNavigateToEditarCliente: (PlanRuteoEntity) -> Unit = {},
+    onNavigateToInventario: (Long) -> Unit = {}
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -529,7 +530,7 @@ fun MainMapScreen(
                     }
                 }
 
-                // Switch de Modo: Visitas vs Censo / Saneamiento
+                // Switch de Modo: Visitas vs Saneamiento vs Toma de Stock
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -541,6 +542,8 @@ fun MainMapScreen(
                     horizontalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     val isVisitasMode = mapMode == MapMode.VISITAS
+                    val isCensoMode = mapMode == MapMode.CENSO
+                    val isInventarioMode = mapMode == MapMode.INVENTARIO
 
                     Box(
                         modifier = Modifier
@@ -553,7 +556,7 @@ fun MainMapScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Modo Visitas",
+                            text = "Visitas",
                             style = TextStyle(
                                 fontSize = 11.sp,
                                 fontWeight = if (isVisitasMode) FontWeight.Bold else FontWeight.Normal,
@@ -566,18 +569,38 @@ fun MainMapScreen(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
-                            .shadow(if (!isVisitasMode) 1.dp else 0.dp, RoundedCornerShape(6.dp))
+                            .shadow(if (isCensoMode) 1.dp else 0.dp, RoundedCornerShape(6.dp))
                             .clip(RoundedCornerShape(6.dp))
-                            .background(if (!isVisitasMode) IosCardSurface else Color.Transparent)
+                            .background(if (isCensoMode) IosCardSurface else Color.Transparent)
                             .clickable { viewModel.setMapMode(MapMode.CENSO) },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Modo Censo / Saneamiento",
+                            text = "Saneamiento",
                             style = TextStyle(
                                 fontSize = 11.sp,
-                                fontWeight = if (!isVisitasMode) FontWeight.Bold else FontWeight.Normal,
-                                color = if (!isVisitasMode) IosSystemPurple else IosLabelSecondary
+                                fontWeight = if (isCensoMode) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isCensoMode) IosSystemPurple else IosLabelSecondary
+                            )
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .shadow(if (isInventarioMode) 1.dp else 0.dp, RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (isInventarioMode) IosCardSurface else Color.Transparent)
+                            .clickable { viewModel.setMapMode(MapMode.INVENTARIO) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Toma de Stock",
+                            style = TextStyle(
+                                fontSize = 11.sp,
+                                fontWeight = if (isInventarioMode) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isInventarioMode) IosSystemGreen else IosLabelSecondary
                             )
                         )
                     }
@@ -1024,63 +1047,81 @@ fun MainMapScreen(
 
                             Spacer(modifier = Modifier.height(10.dp))
 
-                            // Botón de Acción Principal (Modo Censo: "Editar Datos Cliente" | Modo Visitas: "Registrar Visita")
-                            if (isCensoMode) {
-                                Button(
-                                    onClick = { onNavigateToEditarCliente(client) },
-                                    colors = ButtonDefaults.buttonColors(containerColor = IosSystemPurple),
-                                    shape = RoundedCornerShape(10.dp),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(42.dp)
-                                ) {
-                                    Icon(Icons.Default.Edit, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = "Editar Datos Cliente",
-                                        style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                                    )
+                            // Botón de Acción Principal (Visitas: "Registrar Visita" | Saneamiento: "Editar Datos Cliente" | Inventario: "Toma de Stock")
+                            when (mapMode) {
+                                MapMode.CENSO -> {
+                                    Button(
+                                        onClick = { onNavigateToEditarCliente(client) },
+                                        colors = ButtonDefaults.buttonColors(containerColor = IosSystemPurple),
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(42.dp)
+                                    ) {
+                                        Icon(Icons.Default.Edit, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "Editar Datos Cliente",
+                                            style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                        )
+                                    }
                                 }
-                            } else {
-                                Button(
-                                    onClick = {
-                                        if (!viewModel.isGpsEnabled()) {
-                                            Toast.makeText(context, "El GPS está apagado. Debe activar la ubicación para registrar una visita.", Toast.LENGTH_LONG).show()
-                                            context.startActivity(android.content.Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
-                                            return@Button
-                                        }
-                                        val loc = latestLocation
-                                        if (loc == null) {
-                                            Toast.makeText(context, "Esperando señal GPS...", Toast.LENGTH_SHORT).show()
-                                            return@Button
-                                        }
-                                        visitaViewModel.startVisitaForClient(
-                                            client = client,
-                                            distanceMeters = (distToClient ?: Float.MAX_VALUE.toDouble()).toFloat(),
-                                            lat = loc.latitude,
-                                            lon = loc.longitude,
-                                            accuracy = loc.accuracy
+                                MapMode.INVENTARIO -> {
+                                    Button(
+                                        onClick = { onNavigateToInventario(client.clientId) },
+                                        colors = ButtonDefaults.buttonColors(containerColor = IosSystemGreen),
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(42.dp)
+                                    ) {
+                                        Text(
+                                            text = "Toma de Stock",
+                                            style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                         )
-                                        onNavigateToVisita()
-                                    },
-                                    enabled = isInRange,
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = IosSystemGreen,
-                                        disabledContainerColor = IosFillQuaternary
-                                    ),
-                                    shape = RoundedCornerShape(10.dp),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(42.dp)
-                                ) {
-                                    Text(
-                                        text = if (isInRange) "Registrar Visita" else "Acércate a menos de ${PROXIMITY_RADIUS_METERS.toInt()}m",
-                                        style = TextStyle(
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (isInRange) Color.White else IosLabelSecondary
+                                    }
+                                }
+                                else -> {
+                                    Button(
+                                        onClick = {
+                                            if (!viewModel.isGpsEnabled()) {
+                                                Toast.makeText(context, "El GPS está apagado. Debe activar la ubicación para registrar una visita.", Toast.LENGTH_LONG).show()
+                                                context.startActivity(android.content.Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                                                return@Button
+                                            }
+                                            val loc = latestLocation
+                                            if (loc == null) {
+                                                Toast.makeText(context, "Esperando señal GPS...", Toast.LENGTH_SHORT).show()
+                                                return@Button
+                                            }
+                                            visitaViewModel.startVisitaForClient(
+                                                client = client,
+                                                distanceMeters = (distToClient ?: Float.MAX_VALUE.toDouble()).toFloat(),
+                                                lat = loc.latitude,
+                                                lon = loc.longitude,
+                                                accuracy = loc.accuracy
+                                            )
+                                            onNavigateToVisita()
+                                        },
+                                        enabled = isInRange,
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = IosSystemGreen,
+                                            disabledContainerColor = IosFillQuaternary
+                                        ),
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(42.dp)
+                                    ) {
+                                        Text(
+                                            text = if (isInRange) "Registrar Visita" else "Acércate a menos de ${PROXIMITY_RADIUS_METERS.toInt()}m",
+                                            style = TextStyle(
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isInRange) Color.White else IosLabelSecondary
+                                            )
                                         )
-                                    )
+                                    }
                                 }
                             }
                         }
