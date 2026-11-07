@@ -638,137 +638,139 @@ fun VisitaRegistrationScreen(
                     }
                 }
 
-                // 2. SECCIÓN: Evidencia Fotográfica
-                Text(
-                    text = "EVIDENCIA FOTOGRÁFICA (${capturedPhotos.size})",
-                    style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosLabelSecondary, letterSpacing = 0.5.sp)
-                )
-                Spacer(modifier = Modifier.height(6.dp))
+                if (!isInventarioOnlyMode) {
+                    // 2. SECCIÓN: Evidencia Fotográfica
+                    Text(
+                        text = "EVIDENCIA FOTOGRÁFICA (${capturedPhotos.size})",
+                        style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosLabelSecondary, letterSpacing = 0.5.sp)
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .glassCard(shape = RoundedCornerShape(22.dp), elevation = 6.dp)
-                        .padding(12.dp)
-                ) {
-                    if (capturedPhotos.isNotEmpty()) {
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            items(capturedPhotos.size) { index ->
-                                val photoFile = capturedPhotos[index]
-                                val bitmap = remember(photoFile, photoFile.lastModified(), photoFile.length()) {
-                                    if (photoFile.exists() && photoFile.length() > 0) {
-                                        BitmapFactory.decodeFile(photoFile.absolutePath)?.asImageBitmap()
-                                    } else null
-                                }
-                                if (bitmap != null) {
-                                    Box(
-                                        modifier = Modifier
-                                            .width(150.dp)
-                                            .height(170.dp)
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .border(0.5.dp, IosBorderSeparator, RoundedCornerShape(12.dp))
-                                    ) {
-                                        Image(
-                                            bitmap = bitmap,
-                                            contentDescription = "Foto ${index + 1}",
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier.fillMaxSize()
-                                        )
-
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .glassCard(shape = RoundedCornerShape(22.dp), elevation = 6.dp)
+                            .padding(12.dp)
+                    ) {
+                        if (capturedPhotos.isNotEmpty()) {
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                items(capturedPhotos.size) { index ->
+                                    val photoFile = capturedPhotos[index]
+                                    val bitmap = remember(photoFile, photoFile.lastModified(), photoFile.length()) {
+                                        if (photoFile.exists() && photoFile.length() > 0) {
+                                            BitmapFactory.decodeFile(photoFile.absolutePath)?.asImageBitmap()
+                                        } else null
+                                    }
+                                    if (bitmap != null) {
                                         Box(
                                             modifier = Modifier
-                                                .align(Alignment.TopStart)
-                                                .padding(6.dp)
-                                                .clip(RoundedCornerShape(6.dp))
-                                                .background(Color.Black.copy(alpha = 0.6f))
-                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                .width(150.dp)
+                                                .height(170.dp)
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .border(0.5.dp, IosBorderSeparator, RoundedCornerShape(12.dp))
                                         ) {
-                                            Text(
-                                                text = "FOTO #${index + 1}",
-                                                color = Color.White,
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.Bold
+                                            Image(
+                                                bitmap = bitmap,
+                                                contentDescription = "Foto ${index + 1}",
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier.fillMaxSize()
                                             )
-                                        }
 
-                                        Box(
-                                            modifier = Modifier
-                                                .align(Alignment.TopEnd)
-                                                .padding(6.dp)
-                                                .size(28.dp)
-                                                .clip(CircleShape)
-                                                .background(Color.Black.copy(alpha = 0.65f))
-                                                .clickable { viewModel.removeCapturedPhoto(photoFile) },
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Close,
-                                                contentDescription = "Eliminar",
-                                                tint = Color.White,
-                                                modifier = Modifier.size(16.dp)
-                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .align(Alignment.TopStart)
+                                                    .padding(6.dp)
+                                                    .clip(RoundedCornerShape(6.dp))
+                                                    .background(Color.Black.copy(alpha = 0.6f))
+                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                            ) {
+                                                Text(
+                                                    text = "FOTO #${index + 1}",
+                                                    color = Color.White,
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+
+                                            Box(
+                                                modifier = Modifier
+                                                    .align(Alignment.TopEnd)
+                                                    .padding(6.dp)
+                                                    .size(28.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color.Black.copy(alpha = 0.65f))
+                                                    .clickable { viewModel.removeCapturedPhoto(photoFile) },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Close,
+                                                    contentDescription = "Eliminar",
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }
                             }
+
+                            Spacer(modifier = Modifier.height(12.dp))
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedButton(
+                            onClick = { dispatchCameraCapture() },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            border = androidx.compose.foundation.BorderStroke(0.8.dp, IosBorderSeparator)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(imageVector = Icons.Default.Add, contentDescription = null, tint = IosSystemBlue, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (capturedPhotos.isEmpty()) "Tomar Fotografía" else "+ Agregar Otra Fotografía",
+                                    color = IosSystemBlue,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
                     }
 
-                    OutlinedButton(
-                        onClick = { dispatchCameraCapture() },
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // 3. SECCIÓN: Observaciones
+                    Text(
+                        text = "OBSERVACIONES (OPCIONAL)",
+                        style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosLabelSecondary, letterSpacing = 0.5.sp)
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(44.dp),
-                        shape = RoundedCornerShape(10.dp),
-                        border = androidx.compose.foundation.BorderStroke(0.8.dp, IosBorderSeparator)
+                            .height(90.dp)
+                            .glassCard(shape = RoundedCornerShape(18.dp), elevation = 4.dp)
+                            .padding(14.dp),
+                        contentAlignment = Alignment.TopStart
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(imageVector = Icons.Default.Add, contentDescription = null, tint = IosSystemBlue, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (capturedPhotos.isEmpty()) "Tomar Fotografía" else "+ Agregar Otra Fotografía",
-                                color = IosSystemBlue,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                        if (comments.isEmpty()) {
+                            Text("Detalles adicionales...", fontSize = 14.sp, color = IosLabelSecondary)
                         }
+                        BasicTextField(
+                            value = comments,
+                            onValueChange = { comments = it },
+                            cursorBrush = SolidColor(IosSystemBlue),
+                            textStyle = TextStyle(fontSize = 14.sp, color = IosLabelPrimary),
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
+
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // 3. SECCIÓN: Observaciones
-                Text(
-                    text = "OBSERVACIONES (OPCIONAL)",
-                    style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosLabelSecondary, letterSpacing = 0.5.sp)
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(90.dp)
-                        .glassCard(shape = RoundedCornerShape(18.dp), elevation = 4.dp)
-                        .padding(14.dp),
-                    contentAlignment = Alignment.TopStart
-                ) {
-                    if (comments.isEmpty()) {
-                        Text("Detalles adicionales...", fontSize = 14.sp, color = IosLabelSecondary)
-                    }
-                    BasicTextField(
-                        value = comments,
-                        onValueChange = { comments = it },
-                        cursorBrush = SolidColor(IosSystemBlue),
-                        textStyle = TextStyle(fontSize = 14.sp, color = IosLabelPrimary),
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
             }
 
             // Botón de Confirmación Fijo Inferior
