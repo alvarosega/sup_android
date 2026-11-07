@@ -102,7 +102,7 @@ fun AppNavGraph(
                     navController.navigate("saneamiento_form?clientId=${client.clientId}")
                 },
                 onNavigateToInventario = { clienteId ->
-                    navController.navigate(Screen.VISITA_REGISTRATION)
+                    navController.navigate("toma_stock_form")
                 }
             )
         }
@@ -115,6 +115,7 @@ fun AppNavGraph(
             VisitaRegistrationScreen(
                 viewModel = sharedVisitaViewModel,
                 sellerCode = "VENDEDOR",
+                isInventarioOnlyMode = false,
                 onNavigateBack = {
                     navController.popBackStack()
                 },
@@ -127,9 +128,31 @@ fun AppNavGraph(
                     } else {
                         navController.navigate("saneamiento_form")
                     }
+                }
+            )
+        }
+        composable("toma_stock_form") {
+            val mapBackStackEntry = remember(it) {
+                navController.getBackStackEntry(Screen.MAP)
+            }
+            val sharedVisitaViewModel: VisitaViewModel = hiltViewModel(mapBackStackEntry)
+
+            VisitaRegistrationScreen(
+                viewModel = sharedVisitaViewModel,
+                sellerCode = "VENDEDOR",
+                isInventarioOnlyMode = true,
+                onNavigateBack = {
+                    navController.popBackStack()
                 },
-                onNavigateToInventario = { clientId ->
-                    navController.navigate("inventario_screen?clientId=$clientId")
+                onRegisteredSuccessfully = {
+                    navController.popBackStack()
+                },
+                onNavigateToSaneamiento = { clientId ->
+                    if (clientId != null) {
+                        navController.navigate("saneamiento_form?clientId=$clientId")
+                    } else {
+                        navController.navigate("saneamiento_form")
+                    }
                 }
             )
         }
