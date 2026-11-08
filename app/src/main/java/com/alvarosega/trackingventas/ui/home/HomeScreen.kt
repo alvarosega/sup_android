@@ -254,7 +254,7 @@ fun HomeScreen(
 
     LaunchedEffect(isOperationActive) {
         while (isOperationActive) {
-            kotlinx.coroutines.delay(30000)
+            kotlinx.coroutines.delay(60000)
             viewModel.checkWorkdayStatus()
         }
     }

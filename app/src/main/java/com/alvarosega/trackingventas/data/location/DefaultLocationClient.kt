@@ -42,7 +42,13 @@ class DefaultLocationClient(
         // 1. Obtener la última ubicación de FusedLocation como base inmediata (0 ms de respuesta)
         val lastLoc = getLastKnownLocation()
 
-        // 2. Intentar obtener una fijación activa de alta precisión
+        // Si la última ubicación es fresca (< 15s) y precisa (< 35m), retornarla directamente para AHORRAR BATERÍA
+        if (lastLoc != null && isLocationFreshAndAccurate(lastLoc, maxAgeMs = 15_000L, maxAccuracyMeters = 35.0f)) {
+            Log.d(TAG, "Ahorro de Batería: Usando ubicación en caché fresca y precisa (±${lastLoc.accuracy}m)")
+            return@withContext calibrateGpsTime(lastLoc)
+        }
+
+        // 2. Intentar obtener una fijación activa rápida
         val freshLoc = getActiveGpsLocation()
         val bestLoc = freshLoc ?: lastLoc
 
@@ -69,7 +75,7 @@ class DefaultLocationClient(
     }
 
     @SuppressLint("MissingPermission")
-    private suspend fun getActiveGpsLocation(): Location? = withTimeoutOrNull(6_000L) {
+    private suspend fun getActiveGpsLocation(): Location? = withTimeoutOrNull(3_500L) {
         val cts = CancellationTokenSource()
         suspendCancellableCoroutine { continuation ->
             continuation.invokeOnCancellation { cts.cancel() }
@@ -99,7 +105,7 @@ class DefaultLocationClient(
         val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000L)
             .setMinUpdateIntervalMillis(500L)
             .setMaxUpdates(1)
-            .setDurationMillis(5000L)
+            .setDurationMillis(3000L)
             .build()
 
         val callback = object : LocationCallback() {
