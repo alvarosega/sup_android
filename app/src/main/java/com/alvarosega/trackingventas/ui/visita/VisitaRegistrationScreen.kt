@@ -435,12 +435,137 @@ fun VisitaRegistrationScreen(
 
                             Spacer(modifier = Modifier.height(10.dp))
 
+                            // Chips de Filtrado Jerárquico Multicapa para Objetivo Venta (J1 -> J2 -> J3)
+                            var selectedJ1Sug by remember { mutableStateOf("Todos") }
+                            var selectedJ2Sug by remember { mutableStateOf("Todos") }
+                            var selectedJ3Sug by remember { mutableStateOf("Todos") }
+
+                            val j1SugList = remember(sug.sugeridos) {
+                                val list = mutableListOf("Todos")
+                                sug.sugeridos.mapNotNull { it.jerarquia1 ?: it.categoria }.distinct().forEach {
+                                    if (!list.contains(it) && it.isNotBlank()) list.add(it)
+                                }
+                                list
+                            }
+
+                            val j2SugList = remember(sug.sugeridos, selectedJ1Sug) {
+                                val base = if (selectedJ1Sug == "Todos") sug.sugeridos else sug.sugeridos.filter { (it.jerarquia1 ?: it.categoria) == selectedJ1Sug }
+                                val list = mutableListOf("Todos")
+                                base.mapNotNull { it.jerarquia2 }.distinct().forEach {
+                                    if (!list.contains(it) && it.isNotBlank()) list.add(it)
+                                }
+                                list
+                            }
+
+                            val j3SugList = remember(sug.sugeridos, selectedJ1Sug, selectedJ2Sug) {
+                                var base = if (selectedJ1Sug == "Todos") sug.sugeridos else sug.sugeridos.filter { (it.jerarquia1 ?: it.categoria) == selectedJ1Sug }
+                                if (selectedJ2Sug != "Todos") base = base.filter { it.jerarquia2 == selectedJ2Sug }
+                                val list = mutableListOf("Todos")
+                                base.mapNotNull { it.jerarquia3 }.distinct().forEach {
+                                    if (!list.contains(it) && it.isNotBlank()) list.add(it)
+                                }
+                                list
+                            }
+
+                            val filteredSugeridosList = remember(sug.sugeridos, selectedJ1Sug, selectedJ2Sug, selectedJ3Sug) {
+                                var list = sug.sugeridos
+                                if (selectedJ1Sug != "Todos") list = list.filter { (it.jerarquia1 ?: it.categoria) == selectedJ1Sug }
+                                if (selectedJ2Sug != "Todos") list = list.filter { it.jerarquia2 == selectedJ2Sug }
+                                if (selectedJ3Sug != "Todos") list = list.filter { it.jerarquia3 == selectedJ3Sug }
+                                list
+                            }
+
+                            // Fila 1: Jerarquía 1 / Categoría Principal
+                            if (j1SugList.size > 2) {
+                                LazyRow(
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    items(j1SugList, key = { "j1_sug_$it" }) { jer ->
+                                        val isSel = selectedJ1Sug == jer
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(if (isSel) IosSystemBlue else IosFillQuaternary)
+                                                .clickable {
+                                                    selectedJ1Sug = jer
+                                                    selectedJ2Sug = "Todos"
+                                                    selectedJ3Sug = "Todos"
+                                                }
+                                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                                        ) {
+                                            Text(
+                                                text = jer,
+                                                fontSize = 11.sp,
+                                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (isSel) Color.White else IosLabelSecondary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Fila 2: Jerarquía 2 / Subcategoría
+                            if (j2SugList.size > 2) {
+                                LazyRow(
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    items(j2SugList, key = { "j2_sug_$it" }) { jer ->
+                                        val isSel = selectedJ2Sug == jer
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(if (isSel) IosSystemPurple else IosFillQuaternary)
+                                                .clickable {
+                                                    selectedJ2Sug = jer
+                                                    selectedJ3Sug = "Todos"
+                                                }
+                                                .padding(horizontal = 9.dp, vertical = 4.dp)
+                                        ) {
+                                            Text(
+                                                text = jer,
+                                                fontSize = 11.sp,
+                                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (isSel) Color.White else IosLabelSecondary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Fila 3: Jerarquía 3 / Marca
+                            if (j3SugList.size > 2) {
+                                LazyRow(
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    items(j3SugList, key = { "j3_sug_$it" }) { jer ->
+                                        val isSel = selectedJ3Sug == jer
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(if (isSel) IosSystemGreen else IosFillQuaternary)
+                                                .clickable { selectedJ3Sug = jer }
+                                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                        ) {
+                                            Text(
+                                                text = jer,
+                                                fontSize = 10.sp,
+                                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (isSel) Color.White else IosLabelSecondary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
                             // Listado Simplificado Exclusivo: Nombre + Cantidad Sugerida + Estado
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                sug.sugeridos.forEach { prod ->
+                                filteredSugeridosList.forEach { prod ->
                                     val badgeBg = when {
                                         prod.cumpleSugerido -> Color(0xFFE8F9ED)
                                         prod.comproMesActual -> Color(0xFFEBF3FF)
