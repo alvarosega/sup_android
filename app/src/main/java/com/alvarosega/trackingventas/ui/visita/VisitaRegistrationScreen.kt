@@ -427,7 +427,7 @@ fun VisitaRegistrationScreen(
                                         .padding(horizontal = 10.dp, vertical = 5.dp)
                                 ) {
                                     Text(
-                                        text = "${sug.sugeridos.size} SKUs Sugeridos",
+                                        text = "${sug.sugeridos.size} SKUs Objetivo",
                                         style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosSystemBlue)
                                     )
                                 }
@@ -479,7 +479,7 @@ fun VisitaRegistrationScreen(
                                                 )
                                             }
                                             Text(
-                                                text = "Sugerido: ${prod.cantSugerida} un.",
+                                                text = "Objetivo: ${prod.cantSugerida} un.",
                                                 style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = IosSystemBlue)
                                             )
                                         }
