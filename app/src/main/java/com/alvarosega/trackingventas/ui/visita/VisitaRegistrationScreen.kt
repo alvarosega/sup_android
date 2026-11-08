@@ -48,12 +48,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import com.alvarosega.trackingventas.data.local.entity.PlanRuteoEntity
 import com.alvarosega.trackingventas.data.remote.dto.ProductoInventarioDto
 import com.alvarosega.trackingventas.ui.camera.VisitaCameraPreview
 import com.alvarosega.trackingventas.ui.theme.IosColors
 import com.alvarosega.trackingventas.ui.theme.glassCard
+import java.util.Locale
 
 private data class EventoTimelineData(
     val fecha: String,
@@ -100,6 +100,9 @@ fun VisitaRegistrationScreen(
     val productosHistorial by viewModel.productosHistorial.collectAsState()
     val stockMap by viewModel.stockMap.collectAsState()
     val isLoadingProductos by viewModel.isLoadingProductos.collectAsState()
+
+    val sugeridoState by viewModel.sugeridoState.collectAsState()
+    val isLoadingSugerido by viewModel.isLoadingSugerido.collectAsState()
 
     val isInventarioActive = activeModules["inventario_cliente"] ?: true
 
@@ -289,7 +292,7 @@ fun VisitaRegistrationScreen(
                     .padding(horizontal = 16.dp, vertical = 14.dp)
             ) {
                 if (!isInventarioOnlyMode) {
-                    // MODO REGISTRO DE VISITA: Estado de Atención
+                    // MODO REGISTRO DE VISITA: 1. Estado de Atención
                     Text(
                         text = "ESTADO DE ATENCIÓN",
                         style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosLabelSecondary, letterSpacing = 0.5.sp)
@@ -374,37 +377,32 @@ fun VisitaRegistrationScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
 
-                    // CUOTA OBJETIVO Y COMPRA SUGERIDA DEL CLIENTE (MÓDULO LARAVEL)
-                    val sugeridoState by viewModel.sugeridoState.collectAsState()
-                    val isLoadingSugerido by viewModel.isLoadingSugerido.collectAsState()
-                    var showSugeridoList by remember { mutableStateOf(false) }
-
+                    // MODO REGISTRO DE VISITA: 2. OBJETIVO VENTA DEL CLIENTE (LISTADO SIMPLIFICADO: NOMBRE + CANTIDAD SUGERIDA + ESTADO)
                     if (isLoadingSugerido) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .glassCard(shape = RoundedCornerShape(18.dp), elevation = 4.dp)
-                                .padding(16.dp),
+                                .glassCard(shape = RoundedCornerShape(16.dp), elevation = 3.dp)
+                                .padding(14.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                CircularProgressIndicator(color = IosSystemBlue, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text("Cargando cuota y compra sugerida...", fontSize = 13.sp, color = IosLabelSecondary)
+                                CircularProgressIndicator(color = IosSystemBlue, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Cargando objetivo de venta del cliente...", fontSize = 12.sp, color = IosLabelSecondary)
                             }
                         }
-                        Spacer(modifier = Modifier.height(20.dp))
-                    } else if (sugeridoState != null) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                    } else if (sugeridoState != null && sugeridoState!!.sugeridos.isNotEmpty()) {
                         val sug = sugeridoState!!
-                        val pct = sug.resumenCobertura?.pctCoberturaSkus ?: 0.0
 
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .glassCard(shape = RoundedCornerShape(20.dp), elevation = 6.dp)
-                                .padding(16.dp)
+                                .glassCard(shape = RoundedCornerShape(18.dp), elevation = 4.dp)
+                                .padding(14.dp)
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -413,175 +411,233 @@ fun VisitaRegistrationScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "CUOTA OBJETIVO MENSUAL",
+                                        text = "OBJETIVO VENTA DEL CLIENTE",
                                         style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosLabelSecondary, letterSpacing = 0.5.sp)
                                     )
-                                    Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "Bs. ${String.format(java.util.Locale.US, "%.2f", sug.cuotaObjetivo ?: 0.0)}",
-                                        style = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary)
+                                        text = "Cuota: Bs. ${String.format(Locale.US, "%.2f", sug.cuotaObjetivo ?: 0.0)}",
+                                        style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary)
                                     )
                                 }
 
                                 Box(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(10.dp))
+                                        .clip(RoundedCornerShape(8.dp))
                                         .background(Color(0xFFEBF3FF))
-                                        .border(0.8.dp, IosSystemBlue, RoundedCornerShape(10.dp))
-                                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                                        .padding(horizontal = 10.dp, vertical = 5.dp)
                                 ) {
-                                    Column(horizontalAlignment = Alignment.End) {
-                                        Text(
-                                            text = "Sugerido: Bs. ${String.format(java.util.Locale.US, "%.2f", sug.totalSugerido ?: 0.0)}",
-                                            style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosSystemBlue)
-                                        )
-                                        Text(
-                                            text = "${sug.totalUnidadesSugeridas ?: 0} un. • ${sug.totalSkusSugeridos ?: 0} SKUs",
-                                            style = TextStyle(fontSize = 10.sp, color = IosLabelSecondary)
-                                        )
-                                    }
+                                    Text(
+                                        text = "${sug.sugeridos.size} SKUs Sugeridos",
+                                        style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosSystemBlue)
+                                    )
                                 }
                             }
 
                             Spacer(modifier = Modifier.height(10.dp))
 
-                            // Barra de Cobertura de SKUs MTD
-                            Row(
+                            // Listado Simplificado Exclusivo: Nombre + Cantidad Sugerida + Estado
+                            Column(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Text(
-                                    text = "Cobertura de SKUs Mes",
-                                    style = TextStyle(fontSize = 12.sp, color = IosLabelSecondary, fontWeight = FontWeight.Medium)
-                                )
-                                Text(
-                                    text = "${String.format(java.util.Locale.US, "%.1f", pct)}%",
-                                    style = TextStyle(fontSize = 12.sp, color = IosSystemGreen, fontWeight = FontWeight.Bold)
-                                )
-                            }
+                                sug.sugeridos.forEach { prod ->
+                                    val badgeBg = when {
+                                        prod.cumpleSugerido -> Color(0xFFE8F9ED)
+                                        prod.comproMesActual -> Color(0xFFEBF3FF)
+                                        else -> Color(0xFFFFF5E5)
+                                    }
+                                    val badgeText = when {
+                                        prod.cumpleSugerido -> "Cumplido"
+                                        prod.comproMesActual -> "Compró Mes"
+                                        else -> "Pendiente"
+                                    }
+                                    val badgeColor = when {
+                                        prod.cumpleSugerido -> IosSystemGreen
+                                        prod.comproMesActual -> IosSystemBlue
+                                        else -> Color(0xFFB25E00)
+                                    }
 
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            LinearProgressIndicator(
-                                progress = { (pct / 100.0).coerceIn(0.0, 1.0).toFloat() },
-                                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                                color = IosSystemGreen,
-                                trackColor = IosFillQuaternary
-                            )
-
-                            if (sug.sugeridos.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .clickable { showSugeridoList = !showSugeridoList }
-                                        .padding(vertical = 4.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = if (showSugeridoList) "Ocultar Detalle de Compra Sugerida" else "Ver Detalle de Compra Sugerida (${sug.sugeridos.size} SKUs)",
-                                        style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold, color = IosSystemBlue)
-                                    )
-                                    Icon(
-                                        imageVector = if (showSugeridoList) Icons.Default.Close else Icons.Default.Add,
-                                        contentDescription = null,
-                                        tint = IosSystemBlue,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-
-                                if (showSugeridoList) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-
-                                    Column(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(IosFillQuaternary.copy(alpha = 0.5f))
+                                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        sug.sugeridos.forEach { prod ->
-                                            Column(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .clip(RoundedCornerShape(12.dp))
-                                                    .background(IosFillQuaternary.copy(alpha = 0.6f))
-                                                    .border(0.5.dp, IosBorderSeparator, RoundedCornerShape(12.dp))
-                                                    .padding(10.dp)
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                                    verticalAlignment = Alignment.Top
-                                                ) {
-                                                    Column(modifier = Modifier.weight(1f)) {
-                                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                                            if (prod.esCorePareto) {
-                                                                Box(
-                                                                    modifier = Modifier
-                                                                        .clip(RoundedCornerShape(4.dp))
-                                                                        .background(Color(0xFFFFF3CD))
-                                                                        .padding(horizontal = 4.dp, vertical = 2.dp)
-                                                                ) {
-                                                                    Text("⭐ CORE PARETO", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB25E00))
-                                                                }
-                                                                Spacer(modifier = Modifier.width(6.dp))
-                                                            }
-                                                            Text(
-                                                                text = prod.producto,
-                                                                style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary)
-                                                            )
-                                                        }
-
-                                                        if (!prod.categoria.isNullOrBlank()) {
-                                                            Text(text = prod.categoria, fontSize = 11.sp, color = IosLabelSecondary)
-                                                        }
-
-                                                        Text(
-                                                            text = "Sugerido: ${prod.cantSugerida} un. x Bs. ${prod.precioUnitario} = Bs. ${prod.montoSugerido}",
-                                                            fontSize = 11.sp,
-                                                            color = IosSystemBlue,
-                                                            fontWeight = FontWeight.SemiBold
-                                                        )
-                                                    }
-
-                                                    val badgeBg = when {
-                                                        prod.cumpleSugerido -> Color(0xFFE8F9ED)
-                                                        prod.comproMesActual -> Color(0xFFEBF3FF)
-                                                        else -> Color(0xFFFFF5E5)
-                                                    }
-                                                    val badgeText = when {
-                                                        prod.cumpleSugerido -> "Cumplido"
-                                                        prod.comproMesActual -> "Compró Mes"
-                                                        else -> "Pendiente"
-                                                    }
-                                                    val badgeColor = when {
-                                                        prod.cumpleSugerido -> IosSystemGreen
-                                                        prod.comproMesActual -> IosSystemBlue
-                                                        else -> Color(0xFFB25E00)
-                                                    }
-
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .clip(RoundedCornerShape(6.dp))
-                                                            .background(badgeBg)
-                                                            .padding(horizontal = 6.dp, vertical = 3.dp)
-                                                    ) {
-                                                        Text(text = badgeText, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = badgeColor)
-                                                    }
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                if (prod.esCorePareto) {
+                                                    Text("⭐ ", fontSize = 10.sp)
                                                 }
+                                                Text(
+                                                    text = prod.producto,
+                                                    style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary),
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
                                             }
+                                            Text(
+                                                text = "Sugerido: ${prod.cantSugerida} un.",
+                                                style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = IosSystemBlue)
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.width(8.dp))
+
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(badgeBg)
+                                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                        ) {
+                                            Text(
+                                                text = badgeText,
+                                                style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = badgeColor)
+                                            )
                                         }
                                     }
                                 }
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
+
+                    // MODO REGISTRO DE VISITA: 3. Evidencia Fotográfica
+                    Text(
+                        text = "EVIDENCIA FOTOGRÁFICA (${capturedPhotos.size})",
+                        style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosLabelSecondary, letterSpacing = 0.5.sp)
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .glassCard(shape = RoundedCornerShape(22.dp), elevation = 6.dp)
+                            .padding(12.dp)
+                    ) {
+                        if (capturedPhotos.isNotEmpty()) {
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                items(capturedPhotos.size) { index ->
+                                    val photoFile = capturedPhotos[index]
+                                    val bitmap = remember(photoFile, photoFile.lastModified(), photoFile.length()) {
+                                        if (photoFile.exists() && photoFile.length() > 0) {
+                                            BitmapFactory.decodeFile(photoFile.absolutePath)?.asImageBitmap()
+                                        } else null
+                                    }
+                                    if (bitmap != null) {
+                                        Box(
+                                            modifier = Modifier
+                                                .width(150.dp)
+                                                .height(170.dp)
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .border(0.5.dp, IosBorderSeparator, RoundedCornerShape(12.dp))
+                                        ) {
+                                            Image(
+                                                bitmap = bitmap,
+                                                contentDescription = "Foto ${index + 1}",
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier.fillMaxSize()
+                                            )
+
+                                            Box(
+                                                modifier = Modifier
+                                                    .align(Alignment.TopStart)
+                                                    .padding(6.dp)
+                                                    .clip(RoundedCornerShape(6.dp))
+                                                    .background(Color.Black.copy(alpha = 0.6f))
+                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                            ) {
+                                                Text(
+                                                    text = "FOTO #${index + 1}",
+                                                    color = Color.White,
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+
+                                            Box(
+                                                modifier = Modifier
+                                                    .align(Alignment.TopEnd)
+                                                    .padding(6.dp)
+                                                    .size(28.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color.Black.copy(alpha = 0.65f))
+                                                    .clickable { viewModel.removeCapturedPhoto(photoFile) },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Close,
+                                                    contentDescription = "Eliminar",
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+
+                        OutlinedButton(
+                            onClick = { dispatchCameraCapture() },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            border = androidx.compose.foundation.BorderStroke(0.8.dp, IosBorderSeparator)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(imageVector = Icons.Default.Add, contentDescription = null, tint = IosSystemBlue, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (capturedPhotos.isEmpty()) "Tomar Fotografía" else "+ Agregar Otra Fotografía",
+                                    color = IosSystemBlue,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // MODO REGISTRO DE VISITA: 4. Observaciones
+                    Text(
+                        text = "OBSERVACIONES (OPCIONAL)",
+                        style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosLabelSecondary, letterSpacing = 0.5.sp)
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(90.dp)
+                            .glassCard(shape = RoundedCornerShape(18.dp), elevation = 4.dp)
+                            .padding(14.dp),
+                        contentAlignment = Alignment.TopStart
+                    ) {
+                        if (comments.isEmpty()) {
+                            Text("Detalles adicionales...", fontSize = 14.sp, color = IosLabelSecondary)
+                        }
+                        BasicTextField(
+                            value = comments,
+                            onValueChange = { comments = it },
+                            cursorBrush = SolidColor(IosSystemBlue),
+                            textStyle = TextStyle(fontSize = 14.sp, color = IosLabelPrimary),
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
                 } else {
-                    // MODO TOMA DE STOCK EN PDV: Censo de Inventario con Historial de Movimientos
+                    // MODO TOMA DE STOCK EN PDV: EXCLUSIVAMENTE Censo de Inventario con Historial de Movimientos
                     if (isInventarioActive && productosHistorial.isNotEmpty()) {
                         Text(
                             text = "CENSO DE STOCK EN PDV E HISTORIAL DE MOVIMIENTOS",
@@ -854,140 +910,6 @@ fun VisitaRegistrationScreen(
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                     }
-                }
-
-                if (!isInventarioOnlyMode) {
-                    // 2. SECCIÓN: Evidencia Fotográfica
-                    Text(
-                        text = "EVIDENCIA FOTOGRÁFICA (${capturedPhotos.size})",
-                        style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosLabelSecondary, letterSpacing = 0.5.sp)
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .glassCard(shape = RoundedCornerShape(22.dp), elevation = 6.dp)
-                            .padding(12.dp)
-                    ) {
-                        if (capturedPhotos.isNotEmpty()) {
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                items(capturedPhotos.size) { index ->
-                                    val photoFile = capturedPhotos[index]
-                                    val bitmap = remember(photoFile, photoFile.lastModified(), photoFile.length()) {
-                                        if (photoFile.exists() && photoFile.length() > 0) {
-                                            BitmapFactory.decodeFile(photoFile.absolutePath)?.asImageBitmap()
-                                        } else null
-                                    }
-                                    if (bitmap != null) {
-                                        Box(
-                                            modifier = Modifier
-                                                .width(150.dp)
-                                                .height(170.dp)
-                                                .clip(RoundedCornerShape(12.dp))
-                                                .border(0.5.dp, IosBorderSeparator, RoundedCornerShape(12.dp))
-                                        ) {
-                                            Image(
-                                                bitmap = bitmap,
-                                                contentDescription = "Foto ${index + 1}",
-                                                contentScale = ContentScale.Crop,
-                                                modifier = Modifier.fillMaxSize()
-                                            )
-
-                                            Box(
-                                                modifier = Modifier
-                                                    .align(Alignment.TopStart)
-                                                    .padding(6.dp)
-                                                    .clip(RoundedCornerShape(6.dp))
-                                                    .background(Color.Black.copy(alpha = 0.6f))
-                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                                            ) {
-                                                Text(
-                                                    text = "FOTO #${index + 1}",
-                                                    color = Color.White,
-                                                    fontSize = 10.sp,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                            }
-
-                                            Box(
-                                                modifier = Modifier
-                                                    .align(Alignment.TopEnd)
-                                                    .padding(6.dp)
-                                                    .size(28.dp)
-                                                    .clip(CircleShape)
-                                                    .background(Color.Black.copy(alpha = 0.65f))
-                                                    .clickable { viewModel.removeCapturedPhoto(photoFile) },
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Close,
-                                                    contentDescription = "Eliminar",
-                                                    tint = Color.White,
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(12.dp))
-                        }
-
-                        OutlinedButton(
-                            onClick = { dispatchCameraCapture() },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(44.dp),
-                            shape = RoundedCornerShape(10.dp),
-                            border = androidx.compose.foundation.BorderStroke(0.8.dp, IosBorderSeparator)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(imageVector = Icons.Default.Add, contentDescription = null, tint = IosSystemBlue, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = if (capturedPhotos.isEmpty()) "Tomar Fotografía" else "+ Agregar Otra Fotografía",
-                                    color = IosSystemBlue,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    // 3. SECCIÓN: Observaciones
-                    Text(
-                        text = "OBSERVACIONES (OPCIONAL)",
-                        style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosLabelSecondary, letterSpacing = 0.5.sp)
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(90.dp)
-                            .glassCard(shape = RoundedCornerShape(18.dp), elevation = 4.dp)
-                            .padding(14.dp),
-                        contentAlignment = Alignment.TopStart
-                    ) {
-                        if (comments.isEmpty()) {
-                            Text("Detalles adicionales...", fontSize = 14.sp, color = IosLabelSecondary)
-                        }
-                        BasicTextField(
-                            value = comments,
-                            onValueChange = { comments = it },
-                            cursorBrush = SolidColor(IosSystemBlue),
-                            textStyle = TextStyle(fontSize = 14.sp, color = IosLabelPrimary),
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
                 }
             }
 
