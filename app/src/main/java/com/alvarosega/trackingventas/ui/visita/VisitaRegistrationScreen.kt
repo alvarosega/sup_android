@@ -433,199 +433,127 @@ fun VisitaRegistrationScreen(
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(10.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
 
-                            // Chips de Filtrado Jerárquico Multicapa para Objetivo Venta (J1 -> J2 -> J3)
-                            var selectedJ1Sug by remember { mutableStateOf("Todos") }
-                            var selectedJ2Sug by remember { mutableStateOf("Todos") }
-                            var selectedJ3Sug by remember { mutableStateOf("Todos") }
-
-                            val j1SugList = remember(sug.sugeridos) {
-                                val list = mutableListOf("Todos")
-                                sug.sugeridos.mapNotNull { it.jerarquia1 ?: it.categoria }.distinct().forEach {
-                                    if (!list.contains(it) && it.isNotBlank()) list.add(it)
-                                }
-                                list
-                            }
-
-                            val j2SugList = remember(sug.sugeridos, selectedJ1Sug) {
-                                val base = if (selectedJ1Sug == "Todos") sug.sugeridos else sug.sugeridos.filter { (it.jerarquia1 ?: it.categoria) == selectedJ1Sug }
-                                val list = mutableListOf("Todos")
-                                base.mapNotNull { it.jerarquia2 }.distinct().forEach {
-                                    if (!list.contains(it) && it.isNotBlank()) list.add(it)
-                                }
-                                list
-                            }
-
-                            val j3SugList = remember(sug.sugeridos, selectedJ1Sug, selectedJ2Sug) {
-                                var base = if (selectedJ1Sug == "Todos") sug.sugeridos else sug.sugeridos.filter { (it.jerarquia1 ?: it.categoria) == selectedJ1Sug }
-                                if (selectedJ2Sug != "Todos") base = base.filter { it.jerarquia2 == selectedJ2Sug }
-                                val list = mutableListOf("Todos")
-                                base.mapNotNull { it.jerarquia3 }.distinct().forEach {
-                                    if (!list.contains(it) && it.isNotBlank()) list.add(it)
-                                }
-                                list
-                            }
-
-                            val filteredSugeridosList = remember(sug.sugeridos, selectedJ1Sug, selectedJ2Sug, selectedJ3Sug) {
-                                var list = sug.sugeridos
-                                if (selectedJ1Sug != "Todos") list = list.filter { (it.jerarquia1 ?: it.categoria) == selectedJ1Sug }
-                                if (selectedJ2Sug != "Todos") list = list.filter { it.jerarquia2 == selectedJ2Sug }
-                                if (selectedJ3Sug != "Todos") list = list.filter { it.jerarquia3 == selectedJ3Sug }
-                                list
-                            }
-
-                            // Fila 1: Jerarquía 1 / Categoría Principal
-                            if (j1SugList.size > 2) {
-                                LazyRow(
-                                    modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    items(j1SugList, key = { "j1_sug_$it" }) { jer ->
-                                        val isSel = selectedJ1Sug == jer
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(if (isSel) IosSystemBlue else IosFillQuaternary)
-                                                .clickable {
-                                                    selectedJ1Sug = jer
-                                                    selectedJ2Sug = "Todos"
-                                                    selectedJ3Sug = "Todos"
-                                                }
-                                                .padding(horizontal = 10.dp, vertical = 5.dp)
-                                        ) {
-                                            Text(
-                                                text = jer,
-                                                fontSize = 11.sp,
-                                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
-                                                color = if (isSel) Color.White else IosLabelSecondary
-                                            )
-                                        }
+                            // AGRUPAMIENTO VISUAL POR JERARQUÍA 1 (CUIDADO PERSONAL Y CUIDADO DEL HOGAR)
+                            val groupedSugeridos = remember(sug.sugeridos) {
+                                sug.sugeridos.groupBy { prod ->
+                                    val j1 = (prod.jerarquia1 ?: prod.categoria ?: "GENERAL").uppercase(Locale.US)
+                                    when {
+                                        j1.contains("PERSONAL") || j1.contains("CREMA") || j1.contains("DESODORANTE") || j1.contains("JABON") || j1.contains("SHAMPOO") || j1.contains("PEPSODENT") || j1.contains("REXONA") -> "CUIDADO PERSONAL"
+                                        j1.contains("HOGAR") || j1.contains("DETERGENTE") || j1.contains("SURF") || j1.contains("LIMPIADOR") || j1.contains("OM O") || j1.contains("SKALA") -> "CUIDADO DEL HOGAR"
+                                        else -> j1
                                     }
                                 }
                             }
 
-                            // Fila 2: Jerarquía 2 / Subcategoría
-                            if (j2SugList.size > 2) {
-                                LazyRow(
-                                    modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    items(j2SugList, key = { "j2_sug_$it" }) { jer ->
-                                        val isSel = selectedJ2Sug == jer
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(if (isSel) IosSystemPurple else IosFillQuaternary)
-                                                .clickable {
-                                                    selectedJ2Sug = jer
-                                                    selectedJ3Sug = "Todos"
-                                                }
-                                                .padding(horizontal = 9.dp, vertical = 4.dp)
-                                        ) {
-                                            Text(
-                                                text = jer,
-                                                fontSize = 11.sp,
-                                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
-                                                color = if (isSel) Color.White else IosLabelSecondary
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Fila 3: Jerarquía 3 / Marca
-                            if (j3SugList.size > 2) {
-                                LazyRow(
-                                    modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    items(j3SugList, key = { "j3_sug_$it" }) { jer ->
-                                        val isSel = selectedJ3Sug == jer
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(if (isSel) IosSystemGreen else IosFillQuaternary)
-                                                .clickable { selectedJ3Sug = jer }
-                                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                                        ) {
-                                            Text(
-                                                text = jer,
-                                                fontSize = 10.sp,
-                                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
-                                                color = if (isSel) Color.White else IosLabelSecondary
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Listado Simplificado Exclusivo: Nombre + Cantidad Sugerida + Estado
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                filteredSugeridosList.forEach { prod ->
-                                    val badgeBg = when {
-                                        prod.cumpleSugerido -> Color(0xFFE8F9ED)
-                                        prod.comproMesActual -> Color(0xFFEBF3FF)
-                                        else -> Color(0xFFFFF5E5)
-                                    }
-                                    val badgeText = when {
-                                        prod.cumpleSugerido -> "Cumplido"
-                                        prod.comproMesActual -> "Compró Mes"
-                                        else -> "Pendiente"
-                                    }
-                                    val badgeColor = when {
-                                        prod.cumpleSugerido -> IosSystemGreen
-                                        prod.comproMesActual -> IosSystemBlue
-                                        else -> Color(0xFFB25E00)
-                                    }
+                                groupedSugeridos.forEach { (catName, itemsList) ->
+                                    val isHogar = catName.contains("HOGAR")
+                                    val headerColor = if (isHogar) IosSystemGreen else IosSystemBlue
+                                    val headerBg = if (isHogar) Color(0xFFE8F9ED) else Color(0xFFEBF3FF)
 
-                                    Row(
+                                    Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clip(RoundedCornerShape(10.dp))
-                                            .background(IosFillQuaternary.copy(alpha = 0.5f))
-                                            .padding(horizontal = 10.dp, vertical = 8.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(headerBg.copy(alpha = 0.4f))
+                                            .border(0.8.dp, headerColor.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                                            .padding(10.dp)
                                     ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                if (prod.esCorePareto) {
-                                                    Text("⭐ ", fontSize = 10.sp)
-                                                }
-                                                Text(
-                                                    text = prod.producto,
-                                                    style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary),
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                            }
-                                            Text(
-                                                text = "Objetivo: ${prod.cantSugerida} un.",
-                                                style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = IosSystemBlue)
-                                            )
-                                        }
-
-                                        Spacer(modifier = Modifier.width(8.dp))
-
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(6.dp))
-                                                .background(badgeBg)
-                                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Text(
-                                                text = badgeText,
-                                                style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = badgeColor)
+                                                text = catName,
+                                                style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = headerColor, letterSpacing = 0.5.sp)
                                             )
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(6.dp))
+                                                    .background(headerBg)
+                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                            ) {
+                                                Text(
+                                                    text = "${itemsList.size} SKUs",
+                                                    style = TextStyle(fontSize = 10.sp, fontWeight = FontWeight.Bold, color = headerColor)
+                                                )
+                                            }
+                                        }
+
+                                        Column(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            itemsList.forEach { prod ->
+                                                val badgeBg = when {
+                                                    prod.cumpleSugerido -> Color(0xFFE8F9ED)
+                                                    prod.comproMesActual -> Color(0xFFEBF3FF)
+                                                    else -> Color(0xFFFFF5E5)
+                                                }
+                                                val badgeText = when {
+                                                    prod.cumpleSugerido -> "Cumplido"
+                                                    prod.comproMesActual -> "Compró Mes"
+                                                    else -> "Pendiente"
+                                                }
+                                                val badgeColor = when {
+                                                    prod.cumpleSugerido -> IosSystemGreen
+                                                    prod.comproMesActual -> IosSystemBlue
+                                                    else -> Color(0xFFB25E00)
+                                                }
+
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clip(RoundedCornerShape(10.dp))
+                                                        .background(IosCardSurface)
+                                                        .border(0.5.dp, IosBorderSeparator, RoundedCornerShape(10.dp))
+                                                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Column(modifier = Modifier.weight(1f)) {
+                                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                                            if (prod.esCorePareto) {
+                                                                Text("⭐ ", fontSize = 10.sp)
+                                                            }
+                                                            Text(
+                                                                text = prod.producto,
+                                                                style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary),
+                                                                maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis
+                                                            )
+                                                        }
+                                                        Text(
+                                                            text = "Objetivo: ${prod.cantSugerida} un.",
+                                                            style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = headerColor)
+                                                        )
+                                                    }
+
+                                                    Spacer(modifier = Modifier.width(8.dp))
+
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .clip(RoundedCornerShape(6.dp))
+                                                            .background(badgeBg)
+                                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = badgeText,
+                                                            style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = badgeColor)
+                                                        )
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
 
                         Spacer(modifier = Modifier.height(16.dp))
                     }
@@ -1036,7 +964,6 @@ fun VisitaRegistrationScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
-            }
 
             // Botón de Confirmación Fijo Inferior
             val isFormValid = if (isInventarioOnlyMode) {
@@ -1106,4 +1033,6 @@ fun VisitaRegistrationScreen(
             }
         }
     }
+}
+}
 }
