@@ -415,8 +415,10 @@ fun VisitaRegistrationScreen(
                                         style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosLabelSecondary, letterSpacing = 0.5.sp)
                                     )
                                     Text(
-                                        text = "Cuota: Bs. ${String.format(Locale.US, "%.2f", sug.cuotaObjetivo ?: 0.0)}",
-                                        style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary)
+                                        text = sug.cliente ?: effectiveClient?.clientName ?: "Cliente",
+                                        style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
 
@@ -427,7 +429,7 @@ fun VisitaRegistrationScreen(
                                         .padding(horizontal = 10.dp, vertical = 5.dp)
                                 ) {
                                     Text(
-                                        text = "${sug.sugeridos.size} SKUs Objetivo",
+                                        text = "${sug.totalSkusSugeridos ?: sug.sugeridos.size} SKUs • Bs. ${String.format(Locale.US, "%.2f", sug.totalSugerido ?: 0.0)}",
                                         style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosSystemBlue)
                                     )
                                 }
@@ -438,7 +440,7 @@ fun VisitaRegistrationScreen(
                             // AGRUPAMIENTO VISUAL DIRECTO POR LA COLUMNA JERARQUÍA 1 (SIN SELECTORES)
                             val groupedSugeridos = remember(sug.sugeridos) {
                                 sug.sugeridos.groupBy { prod ->
-                                    (prod.jerarquia1?.ifBlank { null } ?: prod.categoria?.ifBlank { null } ?: "GENERAL").uppercase(Locale.US)
+                                    (prod.jerarquia1?.ifBlank { null } ?: "GENERAL").uppercase(Locale.US)
                                 }
                             }
 
@@ -447,8 +449,8 @@ fun VisitaRegistrationScreen(
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 groupedSugeridos.forEach { (catName, itemsList) ->
-                                    val isHogar = catName.contains("HOGAR")
-                                    val isPersonal = catName.contains("PERSONAL")
+                                    val isHogar = catName.contains("HOGAR") || catName.contains("HOME")
+                                    val isPersonal = catName.contains("PERSONAL") || catName.contains("CARE")
                                     val headerColor = when {
                                         isHogar -> IosSystemGreen
                                         isPersonal -> IosSystemBlue
@@ -495,21 +497,14 @@ fun VisitaRegistrationScreen(
                                             verticalArrangement = Arrangement.spacedBy(6.dp)
                                         ) {
                                             itemsList.forEach { prod ->
-                                                val badgeBg = when {
-                                                    prod.cumpleSugerido -> Color(0xFFE8F9ED)
-                                                    prod.comproMesActual -> Color(0xFFEBF3FF)
-                                                    else -> Color(0xFFFFF5E5)
+                                                val hasBought = prod.comproMesActual || prod.cantidadCompradaMesActual > 0
+                                                val badgeBg = if (hasBought) Color(0xFFE8F9ED) else Color(0xFFFFF5E5)
+                                                val badgeText = if (hasBought) {
+                                                    "Compró ${prod.cantidadCompradaMesActual} un."
+                                                } else {
+                                                    "Pendiente (${prod.cantSugerida} un.)"
                                                 }
-                                                val badgeText = when {
-                                                    prod.cumpleSugerido -> "Cumplido"
-                                                    prod.comproMesActual -> "Compró Mes"
-                                                    else -> "Pendiente"
-                                                }
-                                                val badgeColor = when {
-                                                    prod.cumpleSugerido -> IosSystemGreen
-                                                    prod.comproMesActual -> IosSystemBlue
-                                                    else -> Color(0xFFB25E00)
-                                                }
+                                                val badgeColor = if (hasBought) IosSystemGreen else Color(0xFFB25E00)
 
                                                 Row(
                                                     modifier = Modifier
@@ -522,17 +517,13 @@ fun VisitaRegistrationScreen(
                                                     verticalAlignment = Alignment.CenterVertically
                                                 ) {
                                                     Column(modifier = Modifier.weight(1f)) {
-                                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                                            if (prod.esCorePareto) {
-                                                                Text("⭐ ", fontSize = 10.sp)
-                                                            }
-                                                            Text(
-                                                                text = prod.producto,
-                                                                style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary),
-                                                                maxLines = 1,
-                                                                overflow = TextOverflow.Ellipsis
-                                                            )
-                                                        }
+                                                        Text(
+                                                            text = prod.producto,
+                                                            style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary),
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis
+                                                        )
+                                                        Spacer(modifier = Modifier.height(2.dp))
                                                         Text(
                                                             text = "Objetivo: ${prod.cantSugerida} un.",
                                                             style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = headerColor)

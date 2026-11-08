@@ -184,7 +184,7 @@ class VisitaViewModel @Inject constructor(
                 if (response.isSuccessful && response.body() != null) {
                     val body = response.body()!!
                     _sugeridoState.value = body
-                    Log.d(TAG, "Sugerido cargado para cliente #$clienteId: Cuota Bs. ${body.cuotaObjetivo}, Total Sugerido Bs. ${body.totalSugerido}")
+                    Log.d(TAG, "Sugerido cargado para cliente #$clienteId: Total Sugerido Bs. ${body.totalSugerido}")
                 } else {
                     val err = response.errorBody()?.string()
                     Log.e(TAG, "Error HTTP ${response.code()} cargando sugerido para cliente #$clienteId: $err")
