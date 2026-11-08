@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -990,32 +991,67 @@ fun MainMapScreen(
 
                             val isReferencial = isReferencialClient(client)
 
-                            // Nombre del Cliente, Código y Teléfono para Referenciales en Modo Visitas
+                            // Nombre del Cliente, Código, Teléfono y Día de Visita a la derecha
                             Column(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = client.clientName,
-                                    style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary)
-                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = client.clientName,
+                                        style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary),
+                                        modifier = Modifier.weight(1f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    val diaVisita = client.day ?: ""
+                                    if (diaVisita.isNotBlank()) {
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(Color(0xFFEBF3FF))
+                                                .border(0.8.dp, IosSystemBlue, RoundedCornerShape(6.dp))
+                                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = diaVisita,
+                                                style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IosSystemBlue)
+                                            )
+                                        }
+                                    }
+                                }
+
                                 Spacer(modifier = Modifier.height(2.dp))
-                                if (isReferencial && !isCensoMode) {
-                                    Text(
-                                        text = "Código: #${client.clientId}",
-                                        style = TextStyle(fontSize = 12.sp, color = IosLabelSecondary)
-                                    )
-                                    Text(
-                                        text = "Teléfono: ${client.telefono?.ifBlank { null } ?: client.celular?.ifBlank { null } ?: "Sin teléfono registrado"}",
-                                        style = TextStyle(fontSize = 12.sp, color = IosSystemBlue, fontWeight = FontWeight.SemiBold)
-                                    )
-                                } else {
+
+                                val phoneStr = client.telefono?.ifBlank { null } ?: client.celular?.ifBlank { null } ?: "Sin teléfono"
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
                                     Text(
                                         text = "#${client.clientId} • ${client.tipoNegocio ?: "General"} • ${client.zona ?: "Sin Zona"}",
-                                        style = TextStyle(fontSize = 12.sp, color = IosLabelSecondary)
+                                        style = TextStyle(fontSize = 12.sp, color = IosLabelSecondary),
+                                        modifier = Modifier.weight(1f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
+                                    Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = client.address ?: "Sin dirección registrada",
-                                        style = TextStyle(fontSize = 12.sp, color = IosLabelSecondary)
+                                        text = "📞 $phoneStr",
+                                        style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = IosSystemBlue)
                                     )
                                 }
+
+                                Text(
+                                    text = client.address ?: "Sin dirección registrada",
+                                    style = TextStyle(fontSize = 12.sp, color = IosLabelSecondary),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
 
                             // Caja de Alerta de Saneamiento solo en Modo Censo
