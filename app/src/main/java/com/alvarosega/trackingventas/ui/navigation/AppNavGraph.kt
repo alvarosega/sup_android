@@ -12,6 +12,8 @@ import com.alvarosega.trackingventas.data.local.SessionManager
 import com.alvarosega.trackingventas.ui.home.HomeScreen
 import com.alvarosega.trackingventas.ui.login.LoginScreen
 import com.alvarosega.trackingventas.ui.rechazos.PedidosRechazadosScreen
+import com.alvarosega.trackingventas.ui.pizarra.PizarraScreen
+import com.alvarosega.trackingventas.ui.pizarra.PizarraViewModel
 import com.alvarosega.trackingventas.ui.rechazos.PedidosRechazadosViewModel
 import com.alvarosega.trackingventas.ui.saneamiento.SaneamientoFormScreen
 import com.alvarosega.trackingventas.ui.saneamiento.SaneamientoViewModel
@@ -59,6 +61,9 @@ fun AppNavGraph(
                 onNavigateToMap = {
                     navController.navigate(Screen.MAP)
                 },
+                onNavigateToPizarra = {
+                    navController.navigate("pizarra_screen")
+                },
                 onNavigateToAltaCliente = {
                     navController.navigate("saneamiento_form")
                 },
@@ -70,6 +75,16 @@ fun AppNavGraph(
                     navController.navigate(Screen.LOGIN) {
                         popUpTo(Screen.HOME) { inclusive = true }
                     }
+                }
+            )
+        }
+
+        composable("pizarra_screen") {
+            val pizarraViewModel: PizarraViewModel = hiltViewModel()
+            PizarraScreen(
+                viewModel = pizarraViewModel,
+                onNavigateBack = {
+                    navController.popBackStack()
                 }
             )
         }

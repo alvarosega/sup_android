@@ -26,6 +26,12 @@ interface VisitaApiService {
         @Query("dia") dia: String? = null
     ): Response<List<PlanRuteoDto>>
 
+    @GET("api/pizarra")
+    suspend fun getPizarraResumen(
+        @Query("fecha") fecha: String? = null,
+        @Query("ruta") ruta: String? = null
+    ): Response<com.alvarosega.trackingventas.data.remote.dto.PizarraResponseDto>
+
     @GET("api/visitas/clientes/{clienteId}/sugerido")
     suspend fun getSugeridoCliente(
         @retrofit2.http.Path("clienteId") clienteId: Long,

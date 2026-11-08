@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -210,6 +211,7 @@ fun MonsterWorkdaySwitch(
 fun HomeScreen(
     onNavigateToMap: () -> Unit,
     onLogout: () -> Unit,
+    onNavigateToPizarra: () -> Unit = {},
     onNavigateToRechazos: () -> Unit = {},
     onNavigateToAltaCliente: () -> Unit = {},
     viewModel: MainMapViewModel = hiltViewModel(),
@@ -589,6 +591,81 @@ fun HomeScreen(
                     contentDescription = null,
                     tint = IosLabelSecondary,
                     modifier = Modifier.size(if (isVisitasModuleActive && isOperationActive) 20.dp else 18.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Celda Navegable Estilo Apple Inset Grouped: Pizarra de Métricas (Módulo Laravel)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(
+                        elevation = 2.dp,
+                        shape = RoundedCornerShape(16.dp),
+                        ambientColor = Color(0x08000000),
+                        spotColor = Color(0x08000000)
+                    )
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(if (isOperationActive) IosCardSurface else IosFillQuaternary)
+                    .border(0.8.dp, IosBorderSeparator, RoundedCornerShape(16.dp))
+                    .clickable {
+                        if (!isOperationActive) {
+                            Toast.makeText(context, "Debe iniciar jornada primero para consultar la Pizarra", Toast.LENGTH_SHORT).show()
+                            return@clickable
+                        }
+                        onNavigateToPizarra()
+                    }
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(46.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isOperationActive) Color(0xFFEBF3FF) else IosFillQuaternary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = "Pizarra de Métricas",
+                            tint = if (isOperationActive) IosSystemBlue else IosLabelSecondary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(14.dp))
+
+                    Column {
+                        Text(
+                            text = "Pizarra de Métricas",
+                            style = TextStyle(
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (isOperationActive) IosLabelPrimary else IosLabelSecondary
+                            )
+                        )
+                        Text(
+                            text = if (!isOperationActive) "Requiere jornada activa" else "Scoring diario, KPIs y ranking de rutas",
+                            style = TextStyle(
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Normal,
+                                color = IosLabelSecondary
+                            )
+                        )
+                    }
+                }
+
+                Icon(
+                    imageVector = if (isOperationActive) Icons.AutoMirrored.Filled.KeyboardArrowRight else Icons.Default.Lock,
+                    contentDescription = null,
+                    tint = IosLabelSecondary,
+                    modifier = Modifier.size(if (isOperationActive) 20.dp else 18.dp)
                 )
             }
 
