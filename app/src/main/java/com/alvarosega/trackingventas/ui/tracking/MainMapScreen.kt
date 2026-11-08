@@ -861,8 +861,8 @@ fun MainMapScreen(
                     }
                 }
 
-                // Botón Alta Cliente
-                if (selectedClient == null) {
+                // Botón Alta Cliente (Solo visible en Modo Saneamiento)
+                if (mapMode == MapMode.CENSO && selectedClient == null) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
