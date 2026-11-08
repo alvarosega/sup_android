@@ -92,6 +92,12 @@ class VisitaViewModel @Inject constructor(
     private val _isLoadingProductos = MutableStateFlow(false)
     val isLoadingProductos: StateFlow<Boolean> = _isLoadingProductos.asStateFlow()
 
+    private val _sugeridoState = MutableStateFlow<com.alvarosega.trackingventas.data.remote.dto.SugeridoResponseDto?>(null)
+    val sugeridoState: StateFlow<com.alvarosega.trackingventas.data.remote.dto.SugeridoResponseDto?> = _sugeridoState.asStateFlow()
+
+    private val _isLoadingSugerido = MutableStateFlow(false)
+    val isLoadingSugerido: StateFlow<Boolean> = _isLoadingSugerido.asStateFlow()
+
     var activePhotoFile: File? = null
     var capturedLocation: Location? = null
 
@@ -130,9 +136,11 @@ class VisitaViewModel @Inject constructor(
         if (isModuleActive("inventario_cliente")) {
             fetchHistorialProductos(client.clientId)
         }
+        fetchSugeridoCliente(client.clientId)
     }
 
     fun fetchHistorialProductos(clienteId: Long) {
+        fetchSugeridoCliente(clienteId)
         viewModelScope.launch(Dispatchers.IO) {
             _isLoadingProductos.value = true
             try {
@@ -163,6 +171,30 @@ class VisitaViewModel @Inject constructor(
                 _productosHistorial.value = emptyList()
             } finally {
                 _isLoadingProductos.value = false
+            }
+        }
+    }
+
+    fun fetchSugeridoCliente(clienteId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoadingSugerido.value = true
+            try {
+                val response = apiService.getSugeridoCliente(clienteId)
+                Log.d(TAG, "getSugeridoCliente HTTP Code: ${response.code()}")
+                if (response.isSuccessful && response.body() != null) {
+                    val body = response.body()!!
+                    _sugeridoState.value = body
+                    Log.d(TAG, "Sugerido cargado para cliente #$clienteId: Cuota Bs. ${body.cuotaObjetivo}, Total Sugerido Bs. ${body.totalSugerido}")
+                } else {
+                    val err = response.errorBody()?.string()
+                    Log.e(TAG, "Error HTTP ${response.code()} cargando sugerido para cliente #$clienteId: $err")
+                    _sugeridoState.value = null
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Excepción cargando sugerido de cliente #$clienteId", e)
+                _sugeridoState.value = null
+            } finally {
+                _isLoadingSugerido.value = false
             }
         }
     }

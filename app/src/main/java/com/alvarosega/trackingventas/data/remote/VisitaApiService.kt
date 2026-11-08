@@ -26,6 +26,13 @@ interface VisitaApiService {
         @Query("dia") dia: String? = null
     ): Response<List<PlanRuteoDto>>
 
+    @GET("api/visitas/clientes/{clienteId}/sugerido")
+    suspend fun getSugeridoCliente(
+        @retrofit2.http.Path("clienteId") clienteId: Long,
+        @Query("ruta") ruta: String? = null,
+        @Query("dia") dia: String? = null
+    ): Response<com.alvarosega.trackingventas.data.remote.dto.SugeridoResponseDto>
+
     @GET("api/fronteras/ruta")
     suspend fun getFronteraRuta(
         @Query("ruta") rutaOpcional: String? = null
