@@ -18,10 +18,10 @@ data class SugeridoResponseDto(
 data class ProductoSugeridoDto(
     @SerializedName(value = "codigo", alternate = ["codigo_producto", "sku"]) val codigo: String = "",
     @SerializedName(value = "producto", alternate = ["producto_nombre", "nombre"]) val producto: String = "Producto",
-    @SerializedName("categoria") val categoria: String? = "General",
-    @SerializedName(value = "jerarquia1", alternate = ["j1", "jerarquia_1"]) val jerarquia1: String? = null,
+    @SerializedName(value = "jerarquia1", alternate = ["categoria", "j1", "jerarquia_1", "categoria_nombre"]) val jerarquia1: String? = null,
     @SerializedName(value = "jerarquia2", alternate = ["subcategoria", "j2", "jerarquia_2"]) val jerarquia2: String? = null,
     @SerializedName(value = "jerarquia3", alternate = ["marca", "j3", "jerarquia_3"]) val jerarquia3: String? = null,
+    @SerializedName("categoria") val categoria: String? = "General",
     @SerializedName(value = "cant_sugerida", alternate = ["cantidad_sugerida", "sugerido"]) val cantSugerida: Int = 0,
     @SerializedName(value = "precio_unitario", alternate = ["precio"]) val precioUnitario: Double = 0.0,
     @SerializedName(value = "monto_sugerido", alternate = ["monto_total"]) val montoSugerido: Double = 0.0,

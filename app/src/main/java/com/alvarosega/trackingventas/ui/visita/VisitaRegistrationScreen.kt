@@ -435,15 +435,10 @@ fun VisitaRegistrationScreen(
 
                             Spacer(modifier = Modifier.height(12.dp))
 
-                            // AGRUPAMIENTO VISUAL POR JERARQUÍA 1 (CUIDADO PERSONAL Y CUIDADO DEL HOGAR)
+                            // AGRUPAMIENTO VISUAL DIRECTO POR LA COLUMNA JERARQUÍA 1 (SIN SELECTORES)
                             val groupedSugeridos = remember(sug.sugeridos) {
                                 sug.sugeridos.groupBy { prod ->
-                                    val j1 = (prod.jerarquia1 ?: prod.categoria ?: "GENERAL").uppercase(Locale.US)
-                                    when {
-                                        j1.contains("PERSONAL") || j1.contains("CREMA") || j1.contains("DESODORANTE") || j1.contains("JABON") || j1.contains("SHAMPOO") || j1.contains("PEPSODENT") || j1.contains("REXONA") -> "CUIDADO PERSONAL"
-                                        j1.contains("HOGAR") || j1.contains("DETERGENTE") || j1.contains("SURF") || j1.contains("LIMPIADOR") || j1.contains("OM O") || j1.contains("SKALA") -> "CUIDADO DEL HOGAR"
-                                        else -> j1
-                                    }
+                                    (prod.jerarquia1?.ifBlank { null } ?: prod.categoria?.ifBlank { null } ?: "GENERAL").uppercase(Locale.US)
                                 }
                             }
 
@@ -453,8 +448,17 @@ fun VisitaRegistrationScreen(
                             ) {
                                 groupedSugeridos.forEach { (catName, itemsList) ->
                                     val isHogar = catName.contains("HOGAR")
-                                    val headerColor = if (isHogar) IosSystemGreen else IosSystemBlue
-                                    val headerBg = if (isHogar) Color(0xFFE8F9ED) else Color(0xFFEBF3FF)
+                                    val isPersonal = catName.contains("PERSONAL")
+                                    val headerColor = when {
+                                        isHogar -> IosSystemGreen
+                                        isPersonal -> IosSystemBlue
+                                        else -> IosSystemPurple
+                                    }
+                                    val headerBg = when {
+                                        isHogar -> Color(0xFFE8F9ED)
+                                        isPersonal -> Color(0xFFEBF3FF)
+                                        else -> Color(0xFFF3F0FF)
+                                    }
 
                                     Column(
                                         modifier = Modifier
