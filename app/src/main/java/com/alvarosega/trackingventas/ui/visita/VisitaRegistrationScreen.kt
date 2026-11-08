@@ -37,8 +37,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -86,6 +88,7 @@ fun VisitaRegistrationScreen(
 ) {
     val context = LocalContext.current
     val appContext = context.applicationContext
+    val haptic = LocalHapticFeedback.current
 
     val proximityState by viewModel.proximityState.collectAsState()
     val errorMsg by viewModel.errorMessage.collectAsState()
@@ -314,7 +317,12 @@ fun VisitaRegistrationScreen(
                                             borderGradient = if (isSelected) IosColors.BlueGradient else IosColors.GlassBorderGradient
                                         )
                                         .background(if (isSelected) IosSystemBlue else Color.Transparent)
-                                        .clickable { if (!isSaving) selectedStatus = status },
+                                        .clickable {
+                                            if (!isSaving) {
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                selectedStatus = status
+                                            }
+                                        },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
@@ -345,7 +353,12 @@ fun VisitaRegistrationScreen(
                                             borderGradient = if (isSelected) IosColors.BlueGradient else IosColors.GlassBorderGradient
                                         )
                                         .background(if (isSelected) IosSystemBlue else Color.Transparent)
-                                        .clickable { if (!isSaving) selectedStatus = status },
+                                        .clickable {
+                                            if (!isSaving) {
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                selectedStatus = status
+                                            }
+                                        },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
