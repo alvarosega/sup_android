@@ -7,11 +7,14 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.alvarosega.trackingventas.data.local.dao.InventarioClienteDao
 import com.alvarosega.trackingventas.data.remote.VisitaApiService
+import com.alvarosega.trackingventas.data.remote.dto.InventarioItemPayloadDto
+import com.alvarosega.trackingventas.data.remote.dto.InventarioRequestDto
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.MultipartBody
 
 @HiltWorker
 class InventarioSyncWorker @AssistedInject constructor(
@@ -39,46 +42,44 @@ class InventarioSyncWorker @AssistedInject constructor(
                 val clientCode = item.codigoCliente ?: item.clienteId
                 val clientName = item.clienteNombre ?: ""
 
-                val builder = MultipartBody.Builder()
-                    .setType(MultipartBody.FORM)
-                    .addFormDataPart("uuid", item.uuid)
-                    .addFormDataPart("cliente_id", item.clienteId)
-                    .addFormDataPart("codigo_cliente", clientCode)
-                    .addFormDataPart("cliente_nombre", clientName)
-                    .addFormDataPart("cliente", clientName)
+                val itemType = object : TypeToken<List<InventarioItemPayloadDto>>() {}.type
+                val itemsList: List<InventarioItemPayloadDto> = Gson().fromJson(item.itemsJson, itemType) ?: emptyList()
 
-                // Deserializar JSON e insertar cada elemento como un arreglo multipart nativo para PHP/Laravel (items[0][...])
-                try {
-                    val itemType = object : com.google.gson.reflect.TypeToken<List<com.alvarosega.trackingventas.data.remote.dto.InventarioItemPayloadDto>>() {}.type
-                    val itemsList: List<com.alvarosega.trackingventas.data.remote.dto.InventarioItemPayloadDto> = com.google.gson.Gson().fromJson(item.itemsJson, itemType) ?: emptyList()
+                if (itemsList.isEmpty()) {
+                    Log.e(TAG, "Inventario ID ${item.id} no tiene ítems censados. Se omite.")
+                    continue
+                }
 
-                    itemsList.forEachIndexed { idx, payload ->
-                        builder.addFormDataPart("items[$idx][producto_id]", payload.productoId.toString())
-                        builder.addFormDataPart("items[$idx][codigo_producto]", payload.codigoProducto)
-                        builder.addFormDataPart("items[$idx][producto_nombre]", payload.productoNombre)
-                        builder.addFormDataPart("items[$idx][categoria]", payload.categoria ?: "General")
-                        builder.addFormDataPart("items[$idx][stock_fisico]", payload.stockFisico.toString())
+                val request = InventarioRequestDto(
+                    uuid = item.uuid,
+                    clienteId = item.clienteId.toLongOrNull() ?: 0L,
+                    codigoCliente = clientCode,
+                    clienteNombre = clientName,
+                    fechaRegistro = item.createdAt,
+                    latitude = item.latitude,
+                    longitude = item.longitude,
+                    accuracy = item.accuracy?.toDouble(),
+                    isMockLocation = item.isMockLocation,
+                    observaciones = item.comments,
+                    items = itemsList
+                )
+
+                Log.d(TAG, "Enviando Inventario JSON ID ${item.id} (UUID: ${item.uuid}, Cliente: ${item.clienteId}, Items: ${itemsList.size})")
+
+                val response = apiService.storeInventarioClienteJson(request)
+
+                Log.d(TAG, "storeInventarioClienteJson HTTP Status: ${response.code()}")
+
+                if (response.isSuccessful || response.code() == 201 || response.code() == 200) {
+                    val body = response.body()
+                    val isSuccess = body?.success == true || body?.idempotent == true
+                    if (isSuccess || response.isSuccessful) {
+                        inventarioClienteDao.markAsSynced(item.id)
+                        Log.d(TAG, "Inventario de PDV local ID ${item.id} (UUID: ${item.uuid}) sincronizado correctamente en Laravel")
+                    } else {
+                        tieneErrores = true
+                        Log.e(TAG, "Respuesta no exitosa de Laravel para inventario ID ${item.id}: ${body?.message}")
                     }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error deserializando itemsJson para inventario ID ${item.id}", e)
-                    builder.addFormDataPart("items", item.itemsJson)
-                }
-
-                item.comments?.takeIf { it.isNotBlank() }?.let { obs ->
-                    builder.addFormDataPart("comentarios", obs)
-                    builder.addFormDataPart("comments", obs)
-                    builder.addFormDataPart("observaciones", obs)
-                }
-                item.latitude?.let { builder.addFormDataPart("latitude", String.format(java.util.Locale.US, "%.8f", it)) }
-                item.longitude?.let { builder.addFormDataPart("longitude", String.format(java.util.Locale.US, "%.8f", it)) }
-                item.accuracy?.let { builder.addFormDataPart("accuracy", String.format(java.util.Locale.US, "%.2f", it)) }
-                builder.addFormDataPart("is_mock_location", if (item.isMockLocation) "1" else "0")
-
-                val response = apiService.storeInventarioClienteMultipart(builder.build())
-
-                if (response.isSuccessful) {
-                    inventarioClienteDao.markAsSynced(item.id)
-                    Log.d(TAG, "Inventario de PDV local ID ${item.id} (UUID: ${item.uuid}) sincronizado con éxito")
                 } else {
                     tieneErrores = true
                     val errBody = response.errorBody()?.string()

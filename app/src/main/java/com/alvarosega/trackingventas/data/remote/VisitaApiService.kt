@@ -140,6 +140,16 @@ interface VisitaApiService {
     ): Response<com.alvarosega.trackingventas.data.remote.dto.HistorialProductosResponseDto>
 
     @Headers(
+        "Content-Type: application/json",
+        "Accept: application/json",
+        "User-Agent: Mozilla/5.0 (Android; Mobile; TrackingVentas)"
+    )
+    @POST("api/inventarios-cliente")
+    suspend fun storeInventarioClienteJson(
+        @Body request: com.alvarosega.trackingventas.data.remote.dto.InventarioRequestDto
+    ): Response<com.alvarosega.trackingventas.data.remote.dto.InventarioResponseDto>
+
+    @Headers(
         "Accept: application/json",
         "User-Agent: Mozilla/5.0 (Android; Mobile; TrackingVentas)"
     )

@@ -179,7 +179,13 @@ class InventarioViewModel @Inject constructor(
                         codigoProducto = prod.codigo ?: "",
                         productoNombre = prod.producto ?: "Producto",
                         categoria = prod.categoria ?: "General",
-                        stockFisico = map[key]?.toIntOrNull() ?: 0
+                        jerarquia1 = prod.jerarquia1,
+                        jerarquia2 = prod.jerarquia2,
+                        jerarquia3 = prod.jerarquia3,
+                        stockFisico = map[key]?.toIntOrNull() ?: 0,
+                        cantidadHistorica = prod.totalComprado,
+                        ultimaCompraFecha = prod.ultimaCompra?.fecha,
+                        ultimaCompraCantidad = prod.ultimaCompra?.cantidad
                     )
                 }
 
