@@ -95,29 +95,54 @@ class InventarioViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             _isLoadingProductos.value = true
             try {
-                val dias = moduleConfigManager.getIntConfig("inventario_cliente", "dias_historial", 30)
-                val response = apiService.getHistorialProductosCliente(clienteId.toString(), dias)
-                Log.d(TAG, "getHistorialProductosCliente HTTP Code: ${response.code()}")
-                if (response.isSuccessful && response.body() != null) {
-                    val rawList = response.body()!!.productos ?: emptyList()
-                    val sortedList = rawList.sortedWith(
-                        compareByDescending<ProductoInventarioDto> {
-                            (it.historialCompras?.size ?: 0).coerceAtLeast(it.frecuenciaCompra ?: 0)
-                        }
-                        .thenByDescending {
-                            it.montoHistorico ?: (it.totalComprado ?: 0).toDouble()
-                        }
-                        .thenBy { it.producto ?: "" }
-                    )
-                    _productosHistorial.value = sortedList
-                    _stockMap.value = emptyMap()
-                    Log.d(TAG, "Productos de inventario cargados exitosamente para cliente #$clienteId: ${sortedList.size} productos")
-                } else {
-                    val err = response.errorBody()?.string()
-                    Log.e(TAG, "Error HTTP ${response.code()} cargando historial de productos para cliente #$clienteId: $err")
-                    _productosHistorial.value = emptyList()
-                    _statusMessage.value = "Sin productos comprados en los últimos días"
+                var dias = moduleConfigManager.getIntConfig("inventario_cliente", "dias_historial", 90)
+                if (dias < 90) dias = 90
+                var response = apiService.getHistorialProductosCliente(clienteId.toString(), dias)
+                Log.d(TAG, "getHistorialProductosCliente ($dias días) HTTP Code: ${response.code()}")
+
+                var rawList = if (response.isSuccessful && response.body() != null) {
+                    response.body()!!.productos ?: emptyList()
+                } else emptyList()
+
+                // Si con 90 días no vino nada, reintentar ampliando a 180 días
+                if (rawList.isEmpty()) {
+                    val fallbackResp = apiService.getHistorialProductosCliente(clienteId.toString(), 180)
+                    if (fallbackResp.isSuccessful && fallbackResp.body() != null) {
+                        rawList = fallbackResp.body()!!.productos ?: emptyList()
+                    }
                 }
+
+                // Fallback adicional: Si tampoco hay historial en ese endpoint, consultar sugeridos del cliente
+                if (rawList.isEmpty()) {
+                    val sugResp = apiService.getSugeridoCliente(clienteId)
+                    if (sugResp.isSuccessful && sugResp.body() != null) {
+                        val sugItems = sugResp.body()!!.sugeridos
+                        rawList = sugItems.mapIndexed { idx, sug ->
+                            ProductoInventarioDto(
+                                productoId = sug.codigo.toLongOrNull() ?: (idx + 1L),
+                                codigo = sug.codigo,
+                                producto = sug.producto,
+                                categoria = sug.jerarquia1 ?: "General",
+                                jerarquia1 = sug.jerarquia1,
+                                totalComprado = if (sug.comproMesActual) sug.cantidadCompradaMesActual else 0
+                            )
+                        }
+                    }
+                }
+
+                val sortedList = rawList.sortedWith(
+                    compareByDescending<ProductoInventarioDto> {
+                        (it.historialCompras?.size ?: 0).coerceAtLeast(it.frecuenciaCompra ?: 0)
+                    }
+                    .thenByDescending {
+                        it.montoHistorico ?: (it.totalComprado ?: 0).toDouble()
+                    }
+                    .thenBy { it.producto ?: "" }
+                )
+
+                _productosHistorial.value = sortedList
+                _stockMap.value = emptyMap()
+                Log.d(TAG, "Productos de inventario cargados exitosamente para cliente #$clienteId: ${sortedList.size} productos")
             } catch (e: Exception) {
                 Log.e(TAG, "Error cargando historial de productos para inventario", e)
                 _productosHistorial.value = emptyList()

@@ -8,10 +8,10 @@ data class HistorialProductosResponseDto(
     @SerializedName(value = "cliente", alternate = ["cliente_nombre"]) val clienteNombre: String? = null,
     @SerializedName("codigo_cliente") val codigoCliente: String? = null,
     @SerializedName("ruta") val ruta: String? = null,
-    @SerializedName("dias_historial") val diasHistorial: Int? = 30,
+    @SerializedName("dias_historial") val diasHistorial: Int? = 90,
     @SerializedName("total_productos") val totalProductos: Int? = 0,
     @SerializedName("filtros") val filtros: FiltrosInventarioDto? = null,
-    @SerializedName(value = "productos", alternate = ["items", "data"]) val productos: List<ProductoInventarioDto>? = emptyList()
+    @SerializedName(value = "productos", alternate = ["items", "data", "productos_historial", "historial_productos", "historial", "list"]) val productos: List<ProductoInventarioDto>? = emptyList()
 )
 
 data class FiltrosInventarioDto(
@@ -22,21 +22,21 @@ data class FiltrosInventarioDto(
 )
 
 data class ProductoInventarioDto(
-    @SerializedName(value = "producto_id", alternate = ["id"]) val productoId: Long? = 0L,
-    @SerializedName(value = "codigo", alternate = ["codigo_producto"]) val codigo: String? = "",
-    @SerializedName(value = "producto", alternate = ["producto_nombre"]) val producto: String? = "Producto",
-    @SerializedName("categoria") val categoria: String? = "General",
-    @SerializedName("jerarquia1") val jerarquia1: String? = null,
-    @SerializedName("jerarquia2") val jerarquia2: String? = null,
-    @SerializedName("jerarquia3") val jerarquia3: String? = null,
+    @SerializedName(value = "producto_id", alternate = ["id", "codigo", "codigo_producto"]) val productoId: Long? = 0L,
+    @SerializedName(value = "codigo", alternate = ["codigo_producto", "sku", "id"]) val codigo: String? = "",
+    @SerializedName(value = "producto", alternate = ["producto_nombre", "nombre", "descripcion"]) val producto: String? = "Producto",
+    @SerializedName(value = "categoria", alternate = ["categoria_nombre", "cat"]) val categoria: String? = "General",
+    @SerializedName(value = "jerarquia1", alternate = ["jerarquia_1", "j1", "jerarquia_1_nombre"]) val jerarquia1: String? = null,
+    @SerializedName(value = "jerarquia2", alternate = ["jerarquia_2", "j2", "subcategoria"]) val jerarquia2: String? = null,
+    @SerializedName(value = "jerarquia3", alternate = ["jerarquia_3", "j3", "marca"]) val jerarquia3: String? = null,
     @SerializedName("frecuencia_compra") val frecuenciaCompra: Int? = 0,
     @SerializedName("monto_historico") val montoHistorico: Double? = 0.0,
     @SerializedName("total_comprado") val totalComprado: Int? = 0,
     @SerializedName("compras_desde_ultimo_stock") val comprasDesdeUltimoStock: Int? = 0,
     @SerializedName("stock_teorico_disponible") val stockTeoricoDisponible: Int? = null,
-    @SerializedName("ultima_compra") val ultimaCompra: CompraItemDto? = null,
-    @SerializedName("ultimo_stock") val ultimoStock: StockItemDto? = null,
-    @SerializedName(value = "historial_compras", alternate = ["historial"]) val historialCompras: List<CompraItemDto>? = emptyList(),
+    @SerializedName(value = "ultima_compra", alternate = ["latest_purchase", "last_purchase"]) val ultimaCompra: CompraItemDto? = null,
+    @SerializedName(value = "ultimo_stock", alternate = ["latest_stock", "last_stock"]) val ultimoStock: StockItemDto? = null,
+    @SerializedName(value = "historial_compras", alternate = ["historial", "compras"]) val historialCompras: List<CompraItemDto>? = emptyList(),
     @SerializedName("historico_stocks") val historicoStocks: List<StockItemDto>? = emptyList()
 )
 
@@ -48,13 +48,13 @@ typealias UltimaCompraDto = CompraItemDto
 typealias HistorialItemDto = CompraItemDto
 
 data class StockItemDto(
-    @SerializedName("fecha") val fecha: String,
-    @SerializedName("stock_fisico") val stockFisico: Int
+    @SerializedName(value = "fecha", alternate = ["created_at", "fecha_stock", "date"]) val fecha: String,
+    @SerializedName(value = "stock_fisico", alternate = ["cant", "stock"]) val stockFisico: Int
 )
 
 data class CompraItemDto(
-    @SerializedName("fecha") val fecha: String?,
-    @SerializedName("cantidad") val cantidad: Int?
+    @SerializedName(value = "fecha", alternate = ["created_at", "fecha_compra", "date"]) val fecha: String?,
+    @SerializedName(value = "cantidad", alternate = ["cant", "cantidad_comprada", "unidades", "qty"]) val cantidad: Int?
 )
 
 data class InventarioRequestDto(
