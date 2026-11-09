@@ -220,7 +220,7 @@ fun PizarraScreen(
                         Spacer(modifier = Modifier.height(18.dp))
                     }
 
-                    // BREAKDOWN 8 KPIS DETALLADOS
+                    // BREAKDOWN 8 KPIS DETALLADOS CON PORCENTAJE VISUAL EN GRANDE
                     if (kpis != null) {
                         Text(
                             text = "EVALUACIÓN DE KPIS DE DESEMPEÑO",
@@ -251,34 +251,44 @@ fun PizarraScreen(
                             // KPI 2: Cobertura de Visitas
                             kpis.kpi2Visitas?.let { k ->
                                 val visitados = k.totalVisitados ?: k.visitadosActivos ?: 0
+                                val pct = k.coberturaPct ?: 0.0
                                 KpiCard(
                                     nombre = k.nombre ?: "2. Cobertura de Visitas",
                                     puntos = k.puntos ?: 0,
                                     puntosMax = k.puntosMax ?: 5,
                                     cumple = k.cumple == true,
-                                    detalle = "$visitados / ${k.carteraPlan ?: 0} clientes visitados (${String.format(Locale.US, "%.1f", k.coberturaPct ?: 0.0)}%)"
+                                    porcentajeVal = pct,
+                                    porcentajeDisplay = "${String.format(Locale.US, "%.1f", pct)}%",
+                                    detalle = "$visitados / ${k.carteraPlan ?: 0} clientes visitados"
                                 )
                             }
 
                             // KPI 3: Objetivo Diario
                             kpis.kpi3Objetivo?.let { k ->
+                                val pct = k.alcancePct ?: 0.0
                                 KpiCard(
                                     nombre = k.nombre ?: "3. Objetivo Diario",
                                     puntos = k.puntos ?: 0,
                                     puntosMax = k.puntosMax ?: 10,
                                     cumple = k.cumple == true,
-                                    detalle = "Bs. ${String.format(Locale.US, "%.2f", k.ventaHoy ?: 0.0)} / Bs. ${String.format(Locale.US, "%.2f", k.cuotaDiaria ?: 0.0)} (${String.format(Locale.US, "%.1f", k.alcancePct ?: 0.0)}%)"
+                                    porcentajeVal = pct,
+                                    porcentajeDisplay = "${String.format(Locale.US, "%.1f", pct)}%",
+                                    detalle = "Venta: Bs. ${String.format(Locale.US, "%.2f", k.ventaHoy ?: 0.0)} / Meta: Bs. ${String.format(Locale.US, "%.2f", k.cuotaDiaria ?: 0.0)}"
                                 )
                             }
 
                             // KPI 4: Efectividad
                             kpis.kpi4Efectividad?.let { k ->
+                                val pct = k.efectividadPct ?: 0.0
+                                val umbral = k.umbralPct ?: 80.0
                                 KpiCard(
                                     nombre = k.nombre ?: "4. Efectividad de Venta",
                                     puntos = k.puntos ?: 0,
                                     puntosMax = k.puntosMax ?: 30,
                                     cumple = k.cumple == true,
-                                    detalle = "Compradores: ${k.compradores ?: 0} / ${k.carteraPlan ?: 0} (${String.format(Locale.US, "%.1f", k.efectividadPct ?: 0.0)}% vs Meta ${String.format(Locale.US, "%.0f", k.umbralPct ?: 80.0)}%)"
+                                    porcentajeVal = pct,
+                                    porcentajeDisplay = "${String.format(Locale.US, "%.1f", pct)}%",
+                                    detalle = "Compradores: ${k.compradores ?: 0} / ${k.carteraPlan ?: 0} (Meta ${String.format(Locale.US, "%.0f", umbral)}%)"
                                 )
                             }
 
@@ -290,18 +300,22 @@ fun PizarraScreen(
                                     puntos = k.puntos ?: 0,
                                     puntosMax = k.puntosMax ?: 5,
                                     cumple = k.cumple == true,
-                                    detalle = "Compradores ≥ Bs. ${String.format(Locale.US, "%.0f", k.montoMinimoEstandar ?: 70.0)}: $sobreUmbral"
+                                    porcentajeDisplay = "$sobreUmbral Compradores",
+                                    detalle = "Compradores con pedido ≥ Bs. ${String.format(Locale.US, "%.0f", k.montoMinimoEstandar ?: 70.0)}"
                                 )
                             }
 
                             // KPI 6: Reposición
                             kpis.kpi6Reposicion?.let { k ->
+                                val pct = k.tasaPct ?: 0.0
                                 KpiCard(
                                     nombre = k.nombre ?: "6. Reposición (Canasta Habitual)",
                                     puntos = k.puntos ?: 0,
                                     puntosMax = k.puntosMax ?: 15,
                                     cumple = k.cumple == true,
-                                    detalle = "SKUs Match: ${k.skusMatch ?: 0} / ${k.skusEsperados ?: 0} (${String.format(Locale.US, "%.1f", k.tasaPct ?: 0.0)}%)"
+                                    porcentajeVal = pct,
+                                    porcentajeDisplay = "${String.format(Locale.US, "%.1f", pct)}%",
+                                    detalle = "SKUs Match: ${k.skusMatch ?: 0} / ${k.skusEsperados ?: 0} (Meta ${String.format(Locale.US, "%.0f", k.umbralPct ?: 20.0)}%)"
                                 )
                             }
 
@@ -324,12 +338,15 @@ fun PizarraScreen(
 
                             // KPI 8: Covers
                             kpis.kpi8Covers?.let { k ->
+                                val pct = k.tasaPct ?: 0.0
                                 KpiCard(
                                     nombre = k.nombre ?: "8. Covers / Descuentos",
                                     puntos = k.puntos ?: 0,
                                     puntosMax = k.puntosMax ?: 5,
                                     cumple = k.cumple == true,
-                                    detalle = "Cumplen: ${k.cumplen ?: 0} / ${k.totalCompradores ?: 0} (${String.format(Locale.US, "%.1f", k.tasaPct ?: 0.0)}%)"
+                                    porcentajeVal = pct,
+                                    porcentajeDisplay = "${String.format(Locale.US, "%.1f", pct)}%",
+                                    detalle = "Cumplen: ${k.cumplen ?: 0} / ${k.totalCompradores ?: 0} (Meta ${String.format(Locale.US, "%.0f", k.umbralPct ?: 50.0)}%)"
                                 )
                             }
                         }
@@ -403,6 +420,8 @@ private fun KpiCard(
     puntos: Int,
     puntosMax: Int,
     cumple: Boolean,
+    porcentajeVal: Double? = null,
+    porcentajeDisplay: String? = null,
     isPendiente: Boolean = false,
     highlightRed: Boolean = false,
     detalle: String
@@ -410,7 +429,7 @@ private fun KpiCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .glassCard(shape = RoundedCornerShape(14.dp), elevation = 3.dp)
+            .glassCard(shape = RoundedCornerShape(16.dp), elevation = 4.dp)
             .padding(14.dp)
     ) {
         Row(
@@ -457,19 +476,44 @@ private fun KpiCard(
             }
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (porcentajeDisplay != null) {
+            val textColor = if (cumple && !highlightRed) IosSystemGreen else IosSystemRed
+            Text(
+                text = porcentajeDisplay,
+                style = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = textColor)
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+        }
+
+        if (porcentajeVal != null && !isPendiente) {
+            val progressFloat = (porcentajeVal / 100.0).coerceIn(0.0, 1.0).toFloat()
+            val barColor = if (cumple && !highlightRed) IosSystemGreen else IosSystemRed
+
+            LinearProgressIndicator(
+                progress = { progressFloat },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp)),
+                color = barColor,
+                trackColor = Color(0xFFE5E5EA)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
 
         val detailColor = when {
             isPendiente -> Color(0xFFB25E00)
             highlightRed -> IosSystemRed
-            else -> IosLabelPrimary
+            else -> IosLabelSecondary
         }
 
         Text(
             text = detalle,
             style = TextStyle(
                 fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 color = detailColor
             )
         )
