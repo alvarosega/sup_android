@@ -523,9 +523,7 @@ fun VisitaRegistrationScreen(
                                                     Column(modifier = Modifier.weight(1f)) {
                                                         Text(
                                                             text = prod.producto,
-                                                            style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary),
-                                                            maxLines = 1,
-                                                            overflow = TextOverflow.Ellipsis
+                                                            style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary)
                                                         )
                                                         Spacer(modifier = Modifier.height(2.dp))
                                                         Text(
