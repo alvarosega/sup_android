@@ -10,6 +10,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -84,13 +85,26 @@ fun MonsterWorkdaySwitch(
         label = "monsterTopOffset"
     )
 
-    val pupilOffsetX by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (isOperationActive) 2f else -2f,
+    val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition(label = "pupilsAnimation")
+
+    val pupilOffsetX by infiniteTransition.animateFloat(
+        initialValue = -3f,
+        targetValue = 3f,
         animationSpec = androidx.compose.animation.core.infiniteRepeatable(
-            animation = androidx.compose.animation.core.tween(1200, easing = androidx.compose.animation.core.LinearEasing),
+            animation = androidx.compose.animation.core.tween(1100, easing = androidx.compose.animation.core.FastOutSlowInEasing),
             repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
         ),
         label = "pupilOffsetX"
+    )
+
+    val pupilOffsetY by infiniteTransition.animateFloat(
+        initialValue = -2f,
+        targetValue = 2f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(1500, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "pupilOffsetY"
     )
 
     Box(
@@ -128,7 +142,7 @@ fun MonsterWorkdaySwitch(
                     ) {
                         Box(
                             modifier = Modifier
-                                .offset(x = pupilOffsetX.dp)
+                                .offset(x = pupilOffsetX.dp, y = pupilOffsetY.dp)
                                 .size(6.dp)
                                 .clip(CircleShape)
                                 .background(Color.Black)
@@ -145,7 +159,7 @@ fun MonsterWorkdaySwitch(
                     ) {
                         Box(
                             modifier = Modifier
-                                .offset(x = pupilOffsetX.dp)
+                                .offset(x = pupilOffsetX.dp, y = pupilOffsetY.dp)
                                 .size(6.dp)
                                 .clip(CircleShape)
                                 .background(Color.Black)
