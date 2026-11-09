@@ -471,13 +471,13 @@ class VisitaViewModel @Inject constructor(
     private fun enqueueVisitaSyncWorker() {
         val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
         val syncWork = OneTimeWorkRequestBuilder<VisitaSyncWorker>().setConstraints(constraints).build()
-        WorkManager.getInstance(context).enqueueUniqueWork("VisitaSyncWorker", ExistingWorkPolicy.REPLACE, syncWork)
+        WorkManager.getInstance(context).enqueueUniqueWork("VisitaSyncWorker", ExistingWorkPolicy.KEEP, syncWork)
     }
 
     private fun enqueueInventarioSyncWorker() {
         val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
         val syncWork = OneTimeWorkRequestBuilder<InventarioSyncWorker>().setConstraints(constraints).build()
-        WorkManager.getInstance(context).enqueueUniqueWork("InventarioSyncWorker", ExistingWorkPolicy.REPLACE, syncWork)
+        WorkManager.getInstance(context).enqueueUniqueWork("InventarioSyncWorker", ExistingWorkPolicy.KEEP, syncWork)
     }
 
     fun clearError() {
