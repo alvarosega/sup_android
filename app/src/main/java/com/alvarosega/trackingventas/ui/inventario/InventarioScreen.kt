@@ -154,30 +154,73 @@ fun InventarioScreen(
                     .padding(32.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "No hay productos registrados en el historial de compras de este cliente.",
-                    style = TextStyle(fontSize = 14.sp, color = IosLabelSecondary),
-                    fontWeight = FontWeight.Medium
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "No hay productos registrados en el historial de este cliente.",
+                        style = TextStyle(fontSize = 14.sp, color = IosLabelSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center),
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Button(
+                        onClick = { viewModel.fetchHistorialProductos(clientId) },
+                        colors = ButtonDefaults.buttonColors(containerColor = IosSystemBlue)
+                    ) {
+                        Text("Cargar Catálogo / Reintentar", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         } else {
-            LazyColumn(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 16.dp, vertical = 10.dp)
-            ) {
-                itemsIndexed(productosHistorial) { idx, prod ->
-                    val prodKey = viewModel.getProdKey(prod, idx)
-                    val currentStockStr = stockMap[prodKey] ?: ""
+            var searchQuery by remember { mutableStateOf("") }
 
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(IosCardSurface)
-                            .border(0.8.dp, IosBorderSeparator, RoundedCornerShape(12.dp))
-                            .padding(14.dp)
-                    ) {
+            val filteredList = remember(productosHistorial, searchQuery) {
+                if (searchQuery.isBlank()) {
+                    productosHistorial
+                } else {
+                    val q = searchQuery.trim().lowercase(java.util.Locale.US)
+                    productosHistorial.filter { p ->
+                        (p.producto ?: "").lowercase(java.util.Locale.US).contains(q) ||
+                        (p.codigo ?: "").lowercase(java.util.Locale.US).contains(q) ||
+                        (p.categoria ?: "").lowercase(java.util.Locale.US).contains(q) ||
+                        (p.jerarquia1 ?: "").lowercase(java.util.Locale.US).contains(q)
+                    }
+                }
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                // Buscador de productos
+                Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Buscar por producto, código o categoría...", fontSize = 13.sp) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = IosCardSurface,
+                            unfocusedContainerColor = IosCardSurface
+                        )
+                    )
+                }
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                ) {
+                    itemsIndexed(filteredList) { idx, prod ->
+                        val prodKey = viewModel.getProdKey(prod, idx)
+                        val currentStockStr = stockMap[prodKey] ?: ""
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(IosCardSurface)
+                                .border(0.8.dp, IosBorderSeparator, RoundedCornerShape(12.dp))
+                                .padding(14.dp)
+                        ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -293,4 +336,5 @@ fun InventarioScreen(
             }
         }
     }
+}
 }

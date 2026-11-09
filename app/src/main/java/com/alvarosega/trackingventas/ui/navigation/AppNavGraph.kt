@@ -117,7 +117,7 @@ fun AppNavGraph(
                     navController.navigate("saneamiento_form?clientId=${client.clientId}")
                 },
                 onNavigateToInventario = { clienteId ->
-                    navController.navigate("toma_stock_form")
+                    navController.navigate("inventario_screen?clientId=$clienteId")
                 }
             )
         }
