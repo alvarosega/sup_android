@@ -24,6 +24,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -87,6 +92,7 @@ fun SaneamientoFormScreen(
     }
 
     var showCameraPreview by remember { mutableStateOf(false) }
+    var showFullscreenMapDialog by remember { mutableStateOf(false) }
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -569,12 +575,30 @@ fun SaneamientoFormScreen(
 
                                 Spacer(modifier = Modifier.height(8.dp))
 
-                                OutlinedButton(
-                                    onClick = { viewModel.capturarGpsParaAlta() },
-                                    modifier = Modifier.fillMaxWidth().height(38.dp),
-                                    shape = RoundedCornerShape(8.dp)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Text("Recalcular a Mi GPS Actual", fontSize = 12.sp, color = IosSystemBlue, fontWeight = FontWeight.SemiBold)
+                                    OutlinedButton(
+                                        onClick = { showFullscreenMapDialog = true },
+                                        modifier = Modifier.weight(1f).height(38.dp),
+                                        shape = RoundedCornerShape(8.dp),
+                                        border = androidx.compose.foundation.BorderStroke(0.8.dp, IosSystemBlue)
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.Place, contentDescription = null, tint = IosSystemBlue, modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("Ver Mapa Completo", fontSize = 12.sp, color = IosSystemBlue, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+
+                                    OutlinedButton(
+                                        onClick = { viewModel.capturarGpsParaAlta() },
+                                        modifier = Modifier.weight(1f).height(38.dp),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text("Recalcular GPS", fontSize = 12.sp, color = IosLabelPrimary, fontWeight = FontWeight.SemiBold)
+                                    }
                                 }
                             }
                         }
@@ -734,6 +758,138 @@ fun SaneamientoFormScreen(
                 showCameraPreview = false
             }
         )
+    }
+
+    if (showFullscreenMapDialog) {
+        val locState by viewModel.capturedLocation.collectAsState()
+        val loc = locState
+        if (loc != null) {
+            Dialog(
+                onDismissRequest = { showFullscreenMapDialog = false },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = IosBackgroundGrouped
+                ) {
+                    Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
+                        // Header de Diálogo Completo
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                                .background(IosCardSurface)
+                                .border(0.5.dp, IosBorderSeparator)
+                                .padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Place, contentDescription = null, tint = IosSystemBlue, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Validar Ubicación Exacta del Local",
+                                    style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary)
+                                )
+                            }
+
+                            IconButton(onClick = { showFullscreenMapDialog = false }) {
+                                Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = IosLabelSecondary)
+                            }
+                        }
+
+                        // MapView de Pantalla Completa
+                        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                            androidx.compose.ui.viewinterop.AndroidView(
+                                factory = { ctx ->
+                                    org.osmdroid.views.MapView(ctx).apply {
+                                        setMultiTouchControls(true)
+                                        controller.setZoom(19.0)
+                                        val point = org.osmdroid.util.GeoPoint(loc.latitude, loc.longitude)
+                                        controller.setCenter(point)
+
+                                        val marker = org.osmdroid.views.overlay.Marker(this).apply {
+                                            position = point
+                                            title = null
+                                            snippet = null
+                                            infoWindow = null
+                                            icon = getBluePinMarkerDrawable(ctx)
+                                            setAnchor(org.osmdroid.views.overlay.Marker.ANCHOR_CENTER, org.osmdroid.views.overlay.Marker.ANCHOR_BOTTOM)
+                                        }
+                                        overlays.add(marker)
+
+                                        val mapEventsReceiver = object : org.osmdroid.events.MapEventsReceiver {
+                                            override fun singleTapConfirmedHelper(p: org.osmdroid.util.GeoPoint?): Boolean {
+                                                if (p != null) {
+                                                    marker.position = p
+                                                    viewModel.setManualLocation(p.latitude, p.longitude)
+                                                    invalidate()
+                                                }
+                                                return true
+                                            }
+
+                                            override fun longPressHelper(p: org.osmdroid.util.GeoPoint?): Boolean {
+                                                if (p != null) {
+                                                    marker.position = p
+                                                    viewModel.setManualLocation(p.latitude, p.longitude)
+                                                    invalidate()
+                                                }
+                                                return true
+                                            }
+                                        }
+                                        overlays.add(org.osmdroid.views.overlay.MapEventsOverlay(mapEventsReceiver))
+                                    }
+                                },
+                                update = { mapView ->
+                                    val p = org.osmdroid.util.GeoPoint(loc.latitude, loc.longitude)
+                                    mapView.overlays.filterIsInstance<org.osmdroid.views.overlay.Marker>().firstOrNull()?.position = p
+                                    mapView.invalidate()
+                                },
+                                modifier = Modifier.fillMaxSize()
+                            )
+
+                            // Coordenadas flotantes en la parte superior del mapa
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                                    .padding(12.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(IosCardSurface.copy(alpha = 0.92f))
+                                    .border(0.8.dp, IosBorderSeparator, RoundedCornerShape(12.dp))
+                                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text = "Toque el mapa para situar la entrada • Lat ${loc.latitude.toString().take(8)}, Lon ${loc.longitude.toString().take(8)}",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = IosSystemBlue
+                                )
+                            }
+                        }
+
+                        // Botón de Confirmación
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(IosCardSurface)
+                                .border(0.5.dp, IosBorderSeparator)
+                                .padding(16.dp)
+                        ) {
+                            Button(
+                                onClick = { showFullscreenMapDialog = false },
+                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = IosSystemGreen)
+                            ) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Confirmar Ubicación Exacta", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
