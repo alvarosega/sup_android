@@ -231,27 +231,32 @@ fun PizarraScreen(
 
                         Column(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             // KPI 1: Horario de Inicio
                             kpis.kpi1Horario?.let { k ->
+                                val hWeb = k.horaWeb?.ifBlank { null } ?: "Sin marcar"
+                                val hMovil = k.horaMovil?.ifBlank { null } ?: "Sin marcar"
+                                val isLate = (k.horaWeb != null && k.horaWeb > "08:10:00") || (k.horaMovil != null && k.horaMovil > "08:10:00") || k.cumple == false
                                 KpiCard(
                                     nombre = k.nombre ?: "1. Horario de Inicio",
                                     puntos = k.puntos ?: 0,
                                     puntosMax = k.puntosMax ?: 10,
                                     cumple = k.cumple == true,
-                                    detalle = "Primer Check-in: ${k.primerCheckin ?: "N/A"} (Umbral: ${k.umbral ?: "08:10"})"
+                                    highlightRed = isLate,
+                                    detalle = "Hora Web: $hWeb   •   Hora App: $hMovil"
                                 )
                             }
 
                             // KPI 2: Cobertura de Visitas
                             kpis.kpi2Visitas?.let { k ->
+                                val visitados = k.totalVisitados ?: k.visitadosActivos ?: 0
                                 KpiCard(
                                     nombre = k.nombre ?: "2. Cobertura de Visitas",
                                     puntos = k.puntos ?: 0,
                                     puntosMax = k.puntosMax ?: 5,
                                     cumple = k.cumple == true,
-                                    detalle = "Visitados: ${k.visitadosActivos ?: 0} / ${k.carteraPlan ?: 0} (${String.format(Locale.US, "%.1f", k.coberturaPct ?: 0.0)}%)"
+                                    detalle = "$visitados / ${k.carteraPlan ?: 0} clientes visitados (${String.format(Locale.US, "%.1f", k.coberturaPct ?: 0.0)}%)"
                                 )
                             }
 
@@ -262,7 +267,7 @@ fun PizarraScreen(
                                     puntos = k.puntos ?: 0,
                                     puntosMax = k.puntosMax ?: 10,
                                     cumple = k.cumple == true,
-                                    detalle = "Venta: Bs. ${String.format(Locale.US, "%.2f", k.ventaHoy ?: 0.0)} / Bs. ${String.format(Locale.US, "%.2f", k.cuotaDiaria ?: 0.0)} (${String.format(Locale.US, "%.1f", k.alcancePct ?: 0.0)}%)"
+                                    detalle = "Bs. ${String.format(Locale.US, "%.2f", k.ventaHoy ?: 0.0)} / Bs. ${String.format(Locale.US, "%.2f", k.cuotaDiaria ?: 0.0)} (${String.format(Locale.US, "%.1f", k.alcancePct ?: 0.0)}%)"
                                 )
                             }
 
@@ -273,18 +278,19 @@ fun PizarraScreen(
                                     puntos = k.puntos ?: 0,
                                     puntosMax = k.puntosMax ?: 30,
                                     cumple = k.cumple == true,
-                                    detalle = "Compradores: ${k.compradores ?: 0} / ${k.carteraPlan ?: 0} (${String.format(Locale.US, "%.1f", k.efectividadPct ?: 0.0)}% vs Umbral ${k.umbralPct ?: 80.0}%)"
+                                    detalle = "Compradores: ${k.compradores ?: 0} / ${k.carteraPlan ?: 0} (${String.format(Locale.US, "%.1f", k.efectividadPct ?: 0.0)}% vs Meta ${String.format(Locale.US, "%.0f", k.umbralPct ?: 80.0)}%)"
                                 )
                             }
 
                             // KPI 5: Compra Mínima
                             kpis.kpi5CompraMinima?.let { k ->
+                                val sobreUmbral = k.compradoresSobreUmbral ?: k.compradores ?: 0
                                 KpiCard(
                                     nombre = k.nombre ?: "5. Compra Mínima (Drop Size)",
                                     puntos = k.puntos ?: 0,
                                     puntosMax = k.puntosMax ?: 5,
                                     cumple = k.cumple == true,
-                                    detalle = "Compradores: ${k.compradores ?: 0} (Bajo umbral Bs. ${k.montoMinimoEstandar ?: 70.0}: ${k.compradoresBajoUmbral ?: 0})"
+                                    detalle = "Compradores ≥ Bs. ${String.format(Locale.US, "%.0f", k.montoMinimoEstandar ?: 70.0)}: $sobreUmbral"
                                 )
                             }
 
@@ -295,7 +301,7 @@ fun PizarraScreen(
                                     puntos = k.puntos ?: 0,
                                     puntosMax = k.puntosMax ?: 15,
                                     cumple = k.cumple == true,
-                                    detalle = "Tasa: ${String.format(Locale.US, "%.1f", k.tasaPct ?: 0.0)}% (SKUs Match: ${k.skusMatch ?: 0} / ${k.skusEsperados ?: 0})"
+                                    detalle = "SKUs Match: ${k.skusMatch ?: 0} / ${k.skusEsperados ?: 0} (${String.format(Locale.US, "%.1f", k.tasaPct ?: 0.0)}%)"
                                 )
                             }
 
@@ -309,7 +315,7 @@ fun PizarraScreen(
                                     cumple = k.cumple == true,
                                     isPendiente = isPendiente,
                                     detalle = if (isPendiente) {
-                                        "KPI en desarrollo por backend. Se excluye temporalmente del scoring (evaluación actual sobre 80 pts)."
+                                        "KPI pendiente de desarrollo backend (evaluación actual sobre 80 pts)."
                                     } else {
                                         "Tasa: ${String.format(Locale.US, "%.1f", k.tasaPct ?: 0.0)}% (Ampliación: ${k.skusAmpliacion ?: 0} / Total ${k.totalSkus ?: 0})"
                                     }
@@ -323,7 +329,7 @@ fun PizarraScreen(
                                     puntos = k.puntos ?: 0,
                                     puntosMax = k.puntosMax ?: 5,
                                     cumple = k.cumple == true,
-                                    detalle = "Tasa: ${String.format(Locale.US, "%.1f", k.tasaPct ?: 0.0)}% (Umbral ${k.umbralPct ?: 50.0}%)"
+                                    detalle = "Cumplen: ${k.cumplen ?: 0} / ${k.totalCompradores ?: 0} (${String.format(Locale.US, "%.1f", k.tasaPct ?: 0.0)}%)"
                                 )
                             }
                         }
@@ -398,13 +404,14 @@ private fun KpiCard(
     puntosMax: Int,
     cumple: Boolean,
     isPendiente: Boolean = false,
+    highlightRed: Boolean = false,
     detalle: String
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .glassCard(shape = RoundedCornerShape(14.dp), elevation = 3.dp)
-            .padding(12.dp)
+            .padding(14.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -413,45 +420,57 @@ private fun KpiCard(
         ) {
             Text(
                 text = nombre,
-                style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary),
+                style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary),
                 modifier = Modifier.weight(1f)
             )
 
             if (isPendiente) {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
+                        .clip(RoundedCornerShape(8.dp))
                         .background(Color(0xFFFFF5E5))
-                        .border(0.8.dp, Color(0xFFB25E00), RoundedCornerShape(6.dp))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                        .border(1.dp, Color(0xFFB25E00), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Text(
                         text = "PENDIENTE",
-                        style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB25E00))
+                        style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB25E00))
                     )
                 }
             } else {
+                val badgeBg = if (cumple && !highlightRed) Color(0xFFE8F9ED) else Color(0xFFFFEBEA)
+                val badgeColor = if (cumple && !highlightRed) IosSystemGreen else IosSystemRed
+                val borderCol = if (cumple && !highlightRed) IosSystemGreen else IosSystemRed
+
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (cumple) Color(0xFFE8F9ED) else Color(0xFFFFEBEA))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(badgeBg)
+                        .border(0.8.dp, borderCol, RoundedCornerShape(8.dp))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Text(
                         text = "$puntos / $puntosMax pts",
-                        style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (cumple) IosSystemGreen else IosSystemRed)
+                        style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = badgeColor)
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(6.dp))
+
+        val detailColor = when {
+            isPendiente -> Color(0xFFB25E00)
+            highlightRed -> IosSystemRed
+            else -> IosLabelPrimary
+        }
+
         Text(
             text = detalle,
             style = TextStyle(
-                fontSize = 11.sp,
-                fontWeight = if (isPendiente) FontWeight.SemiBold else FontWeight.Normal,
-                color = if (isPendiente) Color(0xFFB25E00) else IosLabelSecondary
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = detailColor
             )
         )
     }
