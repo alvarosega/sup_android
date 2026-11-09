@@ -299,16 +299,17 @@ fun PizarraScreen(
                                 )
                             }
 
-                            // KPI 7: Ampliación
+                            // KPI 7: Ampliación (Pendiente de Desarrollo)
                             kpis.kpi7Ampliacion?.let { k ->
-                                val isPendiente = k.pendienteDesarrollo == true || k.estado == "PENDIENTE_DESARROLLO" || k.evaluado == false
+                                val isPendiente = k.pendienteDesarrollo == true || k.estado == "PENDIENTE_DESARROLLO" || k.evaluado == false || k.puntosMax == 20
                                 KpiCard(
                                     nombre = k.nombre ?: "7. Ampliación de Portafolio",
                                     puntos = k.puntos ?: 0,
                                     puntosMax = k.puntosMax ?: 20,
                                     cumple = k.cumple == true,
+                                    isPendiente = isPendiente,
                                     detalle = if (isPendiente) {
-                                        "Métrica pendiente de desarrollo (Evaluación sobre 80 pts)"
+                                        "KPI en desarrollo por backend. Se excluye temporalmente del scoring (evaluación actual sobre 80 pts)."
                                     } else {
                                         "Tasa: ${String.format(Locale.US, "%.1f", k.tasaPct ?: 0.0)}% (Ampliación: ${k.skusAmpliacion ?: 0} / Total ${k.totalSkus ?: 0})"
                                     }
@@ -396,6 +397,7 @@ private fun KpiCard(
     puntos: Int,
     puntosMax: Int,
     cumple: Boolean,
+    isPendiente: Boolean = false,
     detalle: String
 ) {
     Column(
@@ -415,20 +417,42 @@ private fun KpiCard(
                 modifier = Modifier.weight(1f)
             )
 
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(if (cumple) Color(0xFFE8F9ED) else Color(0xFFFFEBEA))
-                    .padding(horizontal = 8.dp, vertical = 3.dp)
-            ) {
-                Text(
-                    text = "$puntos / $puntosMax pts",
-                    style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (cumple) IosSystemGreen else IosSystemRed)
-                )
+            if (isPendiente) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0xFFFFF5E5))
+                        .border(0.8.dp, Color(0xFFB25E00), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = "PENDIENTE",
+                        style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB25E00))
+                    )
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (cumple) Color(0xFFE8F9ED) else Color(0xFFFFEBEA))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = "$puntos / $puntosMax pts",
+                        style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (cumple) IosSystemGreen else IosSystemRed)
+                    )
+                }
             }
         }
 
         Spacer(modifier = Modifier.height(4.dp))
-        Text(text = detalle, style = TextStyle(fontSize = 11.sp, color = IosLabelSecondary))
+        Text(
+            text = detalle,
+            style = TextStyle(
+                fontSize = 11.sp,
+                fontWeight = if (isPendiente) FontWeight.SemiBold else FontWeight.Normal,
+                color = if (isPendiente) Color(0xFFB25E00) else IosLabelSecondary
+            )
+        )
     }
 }
