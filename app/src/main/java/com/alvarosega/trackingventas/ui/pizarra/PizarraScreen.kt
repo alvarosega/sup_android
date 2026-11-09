@@ -184,7 +184,7 @@ fun PizarraScreen(
                                 ) {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         Text(
-                                            text = "$score / 100",
+                                            text = "$score / 80",
                                             style = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Bold, color = if (isAprobado) IosSystemGreen else IosSystemRed)
                                         )
                                         Text(
@@ -301,12 +301,17 @@ fun PizarraScreen(
 
                             // KPI 7: Ampliación
                             kpis.kpi7Ampliacion?.let { k ->
+                                val isPendiente = k.pendienteDesarrollo == true || k.estado == "PENDIENTE_DESARROLLO" || k.evaluado == false
                                 KpiCard(
                                     nombre = k.nombre ?: "7. Ampliación de Portafolio",
                                     puntos = k.puntos ?: 0,
                                     puntosMax = k.puntosMax ?: 20,
                                     cumple = k.cumple == true,
-                                    detalle = "Tasa: ${String.format(Locale.US, "%.1f", k.tasaPct ?: 0.0)}% (Ampliación: ${k.skusAmpliacion ?: 0} / Total ${k.totalSkus ?: 0})"
+                                    detalle = if (isPendiente) {
+                                        "Métrica pendiente de desarrollo (Evaluación sobre 80 pts)"
+                                    } else {
+                                        "Tasa: ${String.format(Locale.US, "%.1f", k.tasaPct ?: 0.0)}% (Ampliación: ${k.skusAmpliacion ?: 0} / Total ${k.totalSkus ?: 0})"
+                                    }
                                 )
                             }
 

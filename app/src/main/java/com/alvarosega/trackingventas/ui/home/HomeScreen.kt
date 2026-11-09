@@ -668,7 +668,7 @@ fun HomeScreen(
                         )
                         val scoreTotal = pizarraState?.miRuta?.scoreTotal
                         Text(
-                            text = if (!isOperationActive) "Requiere jornada activa" else if (scoreTotal != null) "Logrado: $scoreTotal% ($scoreTotal / 100 pts)" else "Scoring diario, KPIs y ranking de rutas",
+                            text = if (!isOperationActive) "Requiere jornada activa" else if (scoreTotal != null) "Logrado: $scoreTotal pts ($scoreTotal / 80 pts)" else "Scoring diario, KPIs y ranking de rutas",
                             style = TextStyle(
                                 fontSize = 13.sp,
                                 fontWeight = if (scoreTotal != null && isOperationActive) FontWeight.Bold else FontWeight.Normal,
