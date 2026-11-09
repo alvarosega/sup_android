@@ -762,11 +762,15 @@ fun SaneamientoFormScreen(
 
     if (showFullscreenMapDialog) {
         val locState by viewModel.capturedLocation.collectAsState()
-        val loc = locState
-        if (loc != null) {
+        val initialLoc = remember { locState }
+
+        if (initialLoc != null) {
+            var tempLat by remember { mutableDoubleStateOf(locState?.latitude ?: initialLoc.latitude) }
+            var tempLon by remember { mutableDoubleStateOf(locState?.longitude ?: initialLoc.longitude) }
+
             Dialog(
                 onDismissRequest = { showFullscreenMapDialog = false },
-                properties = DialogProperties(usePlatformDefaultWidth = false)
+                properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = true)
             ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -788,7 +792,7 @@ fun SaneamientoFormScreen(
                                 Icon(Icons.Default.Place, contentDescription = null, tint = IosSystemBlue, modifier = Modifier.size(20.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Validar Ubicación Exacta del Local",
+                                    text = "Ubicación Exacta del Local",
                                     style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary)
                                 )
                             }
@@ -804,12 +808,13 @@ fun SaneamientoFormScreen(
                                 factory = { ctx ->
                                     org.osmdroid.views.MapView(ctx).apply {
                                         setMultiTouchControls(true)
-                                        controller.setZoom(19.0)
-                                        val point = org.osmdroid.util.GeoPoint(loc.latitude, loc.longitude)
-                                        controller.setCenter(point)
+                                        setBuiltInZoomControls(false)
+                                        controller.setZoom(18.5)
+                                        val startPoint = org.osmdroid.util.GeoPoint(initialLoc.latitude, initialLoc.longitude)
+                                        controller.setCenter(startPoint)
 
                                         val marker = org.osmdroid.views.overlay.Marker(this).apply {
-                                            position = point
+                                            position = startPoint
                                             title = null
                                             snippet = null
                                             infoWindow = null
@@ -822,7 +827,8 @@ fun SaneamientoFormScreen(
                                             override fun singleTapConfirmedHelper(p: org.osmdroid.util.GeoPoint?): Boolean {
                                                 if (p != null) {
                                                     marker.position = p
-                                                    viewModel.setManualLocation(p.latitude, p.longitude)
+                                                    tempLat = p.latitude
+                                                    tempLon = p.longitude
                                                     invalidate()
                                                 }
                                                 return true
@@ -831,7 +837,8 @@ fun SaneamientoFormScreen(
                                             override fun longPressHelper(p: org.osmdroid.util.GeoPoint?): Boolean {
                                                 if (p != null) {
                                                     marker.position = p
-                                                    viewModel.setManualLocation(p.latitude, p.longitude)
+                                                    tempLat = p.latitude
+                                                    tempLon = p.longitude
                                                     invalidate()
                                                 }
                                                 return true
@@ -840,34 +847,31 @@ fun SaneamientoFormScreen(
                                         overlays.add(org.osmdroid.views.overlay.MapEventsOverlay(mapEventsReceiver))
                                     }
                                 },
-                                update = { mapView ->
-                                    val p = org.osmdroid.util.GeoPoint(loc.latitude, loc.longitude)
-                                    mapView.overlays.filterIsInstance<org.osmdroid.views.overlay.Marker>().firstOrNull()?.position = p
-                                    mapView.invalidate()
-                                },
+                                update = { /* Intencionalmente vacío para evitar saltos/flicker durante el arrastre manual */ },
                                 modifier = Modifier.fillMaxSize()
                             )
 
-                            // Coordenadas flotantes en la parte superior del mapa
+                            // Indicador Flotante Superior
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.TopCenter)
                                     .padding(12.dp)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(IosCardSurface.copy(alpha = 0.92f))
+                                    .background(IosCardSurface.copy(alpha = 0.95f))
                                     .border(0.8.dp, IosBorderSeparator, RoundedCornerShape(12.dp))
                                     .padding(horizontal = 14.dp, vertical = 8.dp)
                             ) {
                                 Text(
-                                    text = "Toque el mapa para situar la entrada • Lat ${loc.latitude.toString().take(8)}, Lon ${loc.longitude.toString().take(8)}",
+                                    text = "Toca cualquier punto del mapa para posicionar el pin\nLat: ${String.format(java.util.Locale.US, "%.6f", tempLat)}, Lon: ${String.format(java.util.Locale.US, "%.6f", tempLon)}",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = IosSystemBlue
+                                    color = IosSystemBlue,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
                                 )
                             }
                         }
 
-                        // Botón de Confirmación
+                        // Botón de Confirmación Fijo
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -876,14 +880,17 @@ fun SaneamientoFormScreen(
                                 .padding(16.dp)
                         ) {
                             Button(
-                                onClick = { showFullscreenMapDialog = false },
+                                onClick = {
+                                    viewModel.setManualLocation(tempLat, tempLon)
+                                    showFullscreenMapDialog = false
+                                },
                                 modifier = Modifier.fillMaxWidth().height(48.dp),
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = IosSystemGreen)
                             ) {
                                 Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Confirmar Ubicación Exacta", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                Text("Confirmar Ubicación Seleccionada", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                         }
                     }
