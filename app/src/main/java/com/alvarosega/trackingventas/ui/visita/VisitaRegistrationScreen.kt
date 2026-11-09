@@ -131,12 +131,16 @@ fun VisitaRegistrationScreen(
 
     LaunchedEffect(effectiveClient?.clientId) {
         val newId = effectiveClient?.clientId
-        if (newId != null && newId != lastClientId) {
-            lastClientId = newId
-            selectedStatus = null
-            comments = ""
-            isSaving = false
-            viewModel.fetchHistorialProductos(newId)
+        if (newId != null) {
+            if (newId != lastClientId) {
+                lastClientId = newId
+                selectedStatus = null
+                comments = ""
+                isSaving = false
+            }
+            if (productosHistorial.isEmpty()) {
+                viewModel.fetchHistorialProductos(newId)
+            }
         }
     }
 
@@ -686,7 +690,44 @@ fun VisitaRegistrationScreen(
                     Spacer(modifier = Modifier.height(24.dp))
                 } else {
                     // MODO TOMA DE STOCK EN PDV: EXCLUSIVAMENTE Censo de Inventario con Historial de Movimientos
-                    if (isInventarioActive && productosHistorial.isNotEmpty()) {
+                    if (isLoadingProductos) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(220.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CircularProgressIndicator(color = IosSystemBlue)
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text("Cargando historial de productos del cliente...", fontSize = 14.sp, color = IosLabelSecondary)
+                            }
+                        }
+                    } else if (productosHistorial.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .glassCard(shape = RoundedCornerShape(18.dp), elevation = 4.dp)
+                                .padding(20.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "No se encontraron productos en el historial de este cliente.",
+                                    style = TextStyle(fontSize = 14.sp, color = IosLabelSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Button(
+                                    onClick = {
+                                        effectiveClient?.clientId?.let { id -> viewModel.fetchHistorialProductos(id) }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = IosSystemBlue)
+                                ) {
+                                    Text("Cargar Catálogo / Reintentar", color = Color.White)
+                                }
+                            }
+                        }
+                    } else if (isInventarioActive) {
                         Text(
                             text = "CENSO DE STOCK EN PDV E HISTORIAL DE MOVIMIENTOS",
                             style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IosSystemBlue, letterSpacing = 0.5.sp)
