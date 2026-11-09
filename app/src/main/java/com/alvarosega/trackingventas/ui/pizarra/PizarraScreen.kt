@@ -102,7 +102,7 @@ fun PizarraScreen(
                 }
 
                 Text(
-                    text = "Pizarra de Métricas",
+                    text = "Pizarra Modelo Unilever",
                     style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.Bold, color = IosLabelPrimary)
                 )
 
@@ -207,7 +207,7 @@ fun PizarraScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "🏆 Ranking General de Rutas",
+                                    text = "Ranking General de Rutas",
                                     style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = IosLabelPrimary)
                                 )
                                 Text(

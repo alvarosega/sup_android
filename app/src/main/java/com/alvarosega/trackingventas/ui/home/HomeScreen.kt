@@ -215,7 +215,8 @@ fun HomeScreen(
     onNavigateToRechazos: () -> Unit = {},
     onNavigateToAltaCliente: () -> Unit = {},
     viewModel: MainMapViewModel = hiltViewModel(),
-    rechazosViewModel: com.alvarosega.trackingventas.ui.rechazos.PedidosRechazadosViewModel = hiltViewModel()
+    rechazosViewModel: com.alvarosega.trackingventas.ui.rechazos.PedidosRechazadosViewModel = hiltViewModel(),
+    pizarraViewModel: com.alvarosega.trackingventas.ui.pizarra.PizarraViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val isOperationActive by viewModel.isOperationActive.collectAsState()
@@ -224,6 +225,7 @@ fun HomeScreen(
     val statusMsg by viewModel.statusMessage.collectAsState()
     val pendingRechazosCount by rechazosViewModel.pendingRechazosCount.collectAsState()
     val activeModules by viewModel.activeModules.collectAsState()
+    val pizarraState by pizarraViewModel.pizarraState.collectAsState()
 
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showStopDialog by remember { mutableStateOf(false) }
@@ -643,19 +645,20 @@ fun HomeScreen(
 
                     Column {
                         Text(
-                            text = "Pizarra de Métricas",
+                            text = "Pizarra Modelo Unilever",
                             style = TextStyle(
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = if (isOperationActive) IosLabelPrimary else IosLabelSecondary
                             )
                         )
+                        val scoreTotal = pizarraState?.miRuta?.scoreTotal
                         Text(
-                            text = if (!isOperationActive) "Requiere jornada activa" else "Scoring diario, KPIs y ranking de rutas",
+                            text = if (!isOperationActive) "Requiere jornada activa" else if (scoreTotal != null) "Logrado: $scoreTotal% ($scoreTotal / 100 pts)" else "Scoring diario, KPIs y ranking de rutas",
                             style = TextStyle(
                                 fontSize = 13.sp,
-                                fontWeight = FontWeight.Normal,
-                                color = IosLabelSecondary
+                                fontWeight = if (scoreTotal != null && isOperationActive) FontWeight.Bold else FontWeight.Normal,
+                                color = if (scoreTotal != null && isOperationActive) IosSystemBlue else IosLabelSecondary
                             )
                         )
                     }
